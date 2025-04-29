@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -euo pipefail
+
+BIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+SHARE_DIR=$(dirname -- "$BIN_DIR")
+LIB_DIR="$SHARE_DIR/lib"
+
+if [ -z "${FAUNADB_JAR-}" ]; then
+    if [ -f "./faunadb.jar" ]; then
+        FAUNADB_JAR="./faunadb.jar"
+    else
+        FAUNADB_JAR="$LIB_DIR/faunadb.jar"
+    fi
+fi
+
+if [ ! -f "$FAUNADB_JAR" ]; then
+    echo "faunadb.jar not found. Please make sure that faunadb.jar is at $FAUNADB_JAR" 1>&2
+    exit 1
+fi
+
+if [ -z "${FAUNADB_CONFIG-}" ]; then
+    if [ -f "./faunadb.yml" ]; then
+        FAUNADB_CONFIG="./faunadb.yml"
+    elif [ -f "$SHARE_DIR/faunadb.yml" ]; then
+        FAUNADB_CONFIG="$SHARE_DIR/faunadb.yml"
+    else
+        FAUNADB_CONFIG="/etc/faunadb.yml"
+    fi
+fi
+
+if [ ! -f "$FAUNADB_CONFIG" ]; then
+    echo "faunadb.yml config file not found." 1>&2
+    exit 1
+fi
+
+if [ -z "${ADMIN_KEY-}" ]; then
+    if grep -q "auth_root_key: " "$FAUNADB_CONFIG"; then
+        echo "Using plain-text auth_root_key found in $FAUNADB_CONFIG"
+        ADMIN_KEY=$(grep "auth_root_key: " "$FAUNADB_CONFIG" | awk '{ print $2 }' || echo "")
+    else
+        ADMIN_KEY=""
+    fi
+fi
+
+admin_opts=()
+
+if [ -n "$ADMIN_KEY" ]; then
+    admin_opts+=("--key")
+    admin_opts+=("$ADMIN_KEY")
+fi
+
+if [ -n "$FAUNADB_CONFIG" ]; then
+    admin_opts+=("--conf")
+    admin_opts+=("$FAUNADB_CONFIG")
+fi
+
+exec java -cp "$FAUNADB_JAR" fauna.tools.Admin "${admin_opts[@]}" "$@"

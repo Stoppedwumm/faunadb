@@ -1,0 +1,32 @@
+This file lists everyone who has contributed to the FaunaDB codebase over the years. Thank you!
+
+- Adam Bollen
+- Alvaro Videla
+- Valerie Hampe
+- Arnaud Gourlay
+- Attila Szegedi
+- Ben Edwards
+- Brandon Mitchell
+- Chris Anderson
+- Ed Ceaser
+- Eduardo V. Bruno
+- Erick Pintor
+- Evan Weaver
+- Jakey Fowler
+- Jan Doms
+- Jean-Daniel Cryans
+- Jeff Smick
+- Joel VanderWerf
+- John Miller
+- Lucas Pedroza
+- Marrony Neris
+- Matt Freels
+- Nathan Taylor
+- Nathaniel May
+- Neil Macneale V
+- Shakrah Yves
+- Simer Plaha
+- Subhash Gopalakrishnan
+- Vlad Orzhekhovskiy
+- Will Berkeley
+- Chase Cundiff

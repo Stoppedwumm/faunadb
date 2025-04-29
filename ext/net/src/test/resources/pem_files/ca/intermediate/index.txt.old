@@ -1,0 +1,6 @@
+V	350912210424Z		1000	unknown	/C=US/ST=CA/O=FaunaDB/OU=Test Server 1/CN=localhost
+V	350912210442Z		1001	unknown	/C=US/ST=CA/O=FaunaDB/OU=Test Server 2/CN=localhost
+V	350912210913Z		1002	unknown	/C=US/ST=CA/O=FaunaDB/OU=Test Client 1/CN=Test Client 1
+V	350912210922Z		1003	unknown	/C=US/ST=CA/O=FaunaDB/OU=Test Client 2/CN=Test Client 2
+V	350913001934Z		1004	unknown	/C=US/O=FaunaDB/CN=localhost
+V	350913171918Z		1005	unknown	/C=US/ST=CA/O=FaunaDB/OU=Test Revoked Server/CN=localhost

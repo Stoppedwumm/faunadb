@@ -1,0 +1,179 @@
+#!/bin/bash
+
+set -euo pipefail
+
+renice 10 $$
+
+# S3_AWS_REGION=""
+# S3_AWS_PREFIX="s3://..."
+# SNAPSHOT_ROOT_DIR="/media/ephemeral/fauna/snapshots"
+
+if [ -z "${S3_AWS_REGION-}" ]; then
+    echo 'S3_AWS_REGION must be set' 1>&2
+    exit 1
+fi
+
+if [ -z "${S3_AWS_PREFIX-}" ]; then
+    echo 'S3_AWS_PREFIX must be set' 1>&2
+    exit 1
+fi
+
+if [ -z "${SNAPSHOT_ROOT_DIR-}" ]; then
+    echo 'SNAPSHOT_ROOT_DIR must be set' 1>&2
+    exit 1
+fi
+
+BACKUP_NAME="snapshot-$(date +%Y%m%d)"
+SNAPSHOT_PATH="$SNAPSHOT_ROOT_DIR/$BACKUP_NAME"
+
+###############################################################################
+# Get output of faunadb-admin status
+#
+# Currently faunadb-admin status returns a string
+# preceding the JSON output, so we handle that to
+# produce clean JSON.
+###############################################################################
+
+HOST_ID=$(faunadb-admin show-identity 2>/dev/null | grep -v 'sun.reflect.Reflection.getCallerClass')
+if [ -z "$HOST_ID" ]; then
+    echo "Host ID not found. Host may not be part of a replica." 1>&2
+    exit 1
+fi
+
+FAUNADB_STATUS=$(faunadb-admin status --json 2>/dev/null | grep -v 'sun.reflect.Reflection.getCallerClass')
+if [ -z "$FAUNADB_STATUS" ]; then
+    echo "faunadb-admin status is empty. Host may not part of a replica." 1>&2
+    exit 1
+fi
+
+REPLICA=$(jq -r '.nodes[] | select(.host_id == "'"$HOST_ID"'") | .replica' <<<"$FAUNADB_STATUS")
+
+ALL_REPLICAS=$(jq -r '.replica_info' <<<"$FAUNADB_STATUS")
+
+###############################################################################
+# Get replicas that participate in backup
+#
+# BACKUP_TYPE_FILTER will look something like: '("data+log","data","log")'
+# REPLICAS_NOT_READY will look something like: '[ "ec2-eu-central-1" ]'
+#
+# For the expression that filters ALL_REPLICAS into BACKUP_REPLICAS:
+#   * First, map each object and select where the .type property is in BACKUP_TYPE_FILTER.
+#         Example syntax: jq -r 'map(select(.type == ("data+log","data","log")))'
+#   * Next, map each resulting object and select where the .name property is not in REPLICAS_NOT_READY.
+#         Example syntax: jq -r 'map(select([.name] | inside(["ec2-eu-central-1"]) | not))'
+#
+# BACKUP_REPLICAS will look something like:
+#
+#  [
+#    {
+#      "name": "ec2-eu-central-1",
+#      "type": "data+log"
+#    },
+#    {
+#      "name": "ec2-eu-west-1",
+#      "type": "data+log"
+#    },
+#    {
+#      "name": "gce-europe-north1",
+#      "type": "data+log"
+#    }
+#  ]
+###############################################################################
+
+BACKUP_TYPE_FILTER='("data+log","data")'
+REPLICAS_NOT_READY=$(jq -r '.nodes | map(select(.status != "up" or .state != "live" or .ownership != .ownership_goal) | .replica) | unique' <<<"$FAUNADB_STATUS")
+
+CURRENT_REPLICA_NOT_READY=$(jq -r 'map(select(. == "'"$REPLICA"'")) | length' <<<"$REPLICAS_NOT_READY")
+if [[ $CURRENT_REPLICA_NOT_READY -ge 1 ]]; then
+    echo "Current replica $REPLICA is not ready. Skipping backup."
+    exit 0
+fi
+
+TYPE_FILTERED_REPLICAS=$(jq -r "map(select(.type == $BACKUP_TYPE_FILTER))" <<<"$ALL_REPLICAS")
+TYPE_FILTERED_REPLICAS_COUNT=$(jq length <<<"$TYPE_FILTERED_REPLICAS")
+if [[ $TYPE_FILTERED_REPLICAS_COUNT -eq 0 ]]; then
+    echo "No replicas matched the filter $BACKUP_TYPE_FILTER in ALL_REPLICAS: $ALL_REPLICAS"
+    exit 1
+fi
+
+BACKUP_REPLICAS=$(jq -r "map(select([.name] | inside($REPLICAS_NOT_READY) | not) | .name)" <<<"$TYPE_FILTERED_REPLICAS")
+BACKUP_REPLICAS_COUNT=$(jq length <<<"$BACKUP_REPLICAS")
+if [[ $BACKUP_REPLICAS_COUNT -eq 0 ]]; then
+    # I don't know under which conditions we would reach this now, but if we do
+    # something is probably up...
+    echo "No replicas are ready for backup. FAUNADB_STATUS: $FAUNADB_STATUS"
+    exit 1
+fi
+
+OFFSET=0
+# Sorting is critical. It guarantees that each host calculates identical replica offsets.
+for rep in $(jq -r '. | sort | .[]' <<<"$BACKUP_REPLICAS"); do
+    if [[ "$rep" == "$REPLICA" ]]; then
+        echo "Replica: $REPLICA, Offset: $OFFSET"
+        break
+    fi
+    OFFSET=$((OFFSET + 1))
+done
+
+if [[ "$OFFSET" -ge "$BACKUP_REPLICAS_COUNT" ]]; then
+    echo "Offset exceeded replica count. Replica $REPLICA was not found in BACKUP_REPLICAS: $BACKUP_REPLICAS"
+    exit 1
+fi
+
+if [ $(($(date +%-j) % $BACKUP_REPLICAS_COUNT)) != $OFFSET ]; then exit; fi
+
+exit_code=0
+
+function cleanup_snapshot {
+    rm -rf "$SNAPSHOT_PATH" || true
+    if [ $exit_code -ne 0 ]; then
+        exit $exit_code
+    fi
+}
+
+trap cleanup_snapshot ERR INT TERM
+
+CREATE_SNAPSHOT_JSON=$(faunadb-admin create-snapshot "$BACKUP_NAME" --json | grep -v WARNING)
+SNAPSHOT_TIME=$(echo "$CREATE_SNAPSHOT_JSON" | jq -r .snapshot.persisted_ts)
+
+if [ -z "${S3_AWS_PATH-}" ]; then
+    S3_AWS_PATH="$S3_AWS_PREFIX/$HOST_ID/$BACKUP_NAME"
+fi
+
+aws s3 cp \
+    --only-show-errors \
+    --region $S3_AWS_REGION \
+    --recursive \
+    "$SNAPSHOT_PATH/" \
+    "$S3_AWS_PATH/"
+
+PARTICIPATING_HOST_IDS=$(jq -r '.nodes | map(select(.replica == "{{ replica }}") | .host_id)' <<<$FAUNADB_STATUS)
+
+BACKUP_METADATA_JSON_STRING=$(jq -n \
+    --arg jq_backup_name "$BACKUP_NAME" \
+    --arg jq_host_id "$HOST_ID" \
+    --arg jq_snapshot_time "$SNAPSHOT_TIME" \
+    --arg jq_replica "$REPLICA" \
+    '{ "replica": $jq_replica, "backup_name": $jq_backup_name, "host_id": $jq_host_id, "snapshot_time": $jq_snapshot_time }')
+
+# We have to add participants here to get real JSON instead of an escaped string as the value
+BACKUP_METADATA_JSON_STRING=$(jq ".participants = $PARTICIPATING_HOST_IDS" <<<"$BACKUP_METADATA_JSON_STRING")
+
+# Add backup size in GB if we can.
+BACKUP_SIZE_GB=$(du -s "$SNAPSHOT" | awk '{ print $1/1024/1024}') || true
+if [ -z "$BACKUP_SIZE_GB" ]; then
+    echo "We could not calculate BACKUP_SIZE_GB. Skipping..."
+else
+    BACKUP_METADATA_JSON_STRING=$(jq ".size_gb = $BACKUP_SIZE_GB" <<<"$BACKUP_METADATA_JSON_STRING")
+fi
+
+# Add number of files in the snapshot.
+# +1 to account for the backup_metadata file.
+BACKUP_FILE_COUNT=$(find "$SNAPSHOT" -type f | wc -l)
+BACKUP_METADATA_JSON_STRING=$(jq ".file_count = $(expr $BACKUP_FILE_COUNT + 1)" <<<"$BACKUP_METADATA_JSON_STRING")
+
+aws s3 cp \
+    --region $S3_AWS_REGION \
+    - "$S3_AWS_PATH/metadata.json" <<<"$BACKUP_METADATA_JSON_STRING"
+
+cleanup_snapshot

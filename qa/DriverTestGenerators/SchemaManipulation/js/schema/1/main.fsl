@@ -1,0 +1,23 @@
+collection test_schema {
+  v1_string: String
+  v1_number: Number = 1
+  v1_boolean: Boolean = false
+  v1_twotypes: String | Number
+  v1_conflicts: { *: Any }?
+
+  index IndexOneField {
+    values [.v1_string]
+  }
+
+  migrations {
+    add .v1_string
+    backfill .v1_string = "backfilled at v1"
+    add .v1_number
+    add .v1_boolean
+    add .v1_twotypes
+    backfill .v1_twotypes = "backfilled at v1"
+    add .v1_conflicts
+    move_conflicts .v1_conflicts
+    move_wildcard .v1_conflicts
+  }
+}

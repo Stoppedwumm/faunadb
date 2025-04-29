@@ -1,0 +1,699 @@
+openapi: 3.0.3
+info:
+  title: FQL v10 request/response API
+  description: >-
+    This spec describes the v10 HTTP-based wire protocol. v10 queries are
+    submitted as HTTP requests which are encoded according to this protocol. The
+    specifics of v10 behavior or APIs are out of scope of this spec. For those,
+    please refer to language docs.
+
+    Caveats/known issues:
+      - Pre-beta, the spec is currently not fully implemented by the service.
+      - Drivers generated based on the spec Yaml by OpenAPI tooling do not
+        produce correct code. As such the spec is useful for documentation
+        generation, but not for direct customer consumption.
+
+  version:
+    0.1.0
+
+paths:
+  /query/1:
+    post:
+      tags:
+        - query
+      summary: Execute a v10 transaction
+      description: ???
+      operationId: query
+      requestBody:
+        description: Transaction request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Query'
+            examples:
+              simple_query:
+                summary: simple query
+                value:
+                  query: "Author.all().where(.name == name)"
+                  arguments:
+                    name: "Alice"
+                  last_txn: "2022-08-23T23:46:36.012335Z"
+              interp_query:
+                summary: interpolated query
+                value:
+                  query: { fql: ["Author.all().where(.name ==", { value: "Alice" }, ")"] }
+                  last_txn: "2022-08-23T23:46:36.012335Z"
+        required: true
+      parameters:
+        - name: x-format
+          in: header
+          description: >-
+            Determines the encoded format expected for the query `arguments`
+            field, and the `data` field of a successful response.
+          schema:
+            $ref: '#/components/schemas/ValueFormat'
+        - name: x-last-txn-ts
+          in: header
+          description: >-
+            If set, will act as the minimum snapshot time the query will be
+            executed at. Clients will automatically populate this based on the
+            highest "txn_ts" result value observed of any transaction the client
+            has processed.
+          schema:
+            type: integer
+        - name: x-typecheck
+          in: header
+          description: >-
+            Enable or disable typechecking of the query before evaluation.
+            Defaults to the value of the "typechecked" on the database
+            configuration.
+          schema:
+            type: boolean
+        - name: x-linearized
+          in: header
+          description: >-
+            If true, unconditionally run the query as strictly serialized. This
+            affects read-only transactions, as transactions which write will
+            already be strictly serialized.
+          schema:
+            type: boolean
+        - name: x-performance-hints
+          in: header
+          description: >-
+            If true, include query performance hints in the summary field of the
+            response.
+          schema:
+            type: boolean
+        - name: x-query-timeout-ms
+          in: header
+          description: >-
+            A client-specified query timeout in milliseconds.
+          schema:
+            type: integer
+        - name: x-max-contention-retries
+          in: header
+          description: >-
+            The maximum number of times a transaction is allowed to retry due to
+            concurrent contention failure before an error is returned.
+          schema:
+            type: integer
+        - name: x-query-tags
+          in: header
+          description: >-
+            A string-encoded set of caller-determined tags which identify the
+            request. Provided back via logging and the query response body.
+
+            The format is a list of key value pairs, like so.
+            - foo=bar
+            - foo=bar,baz=blah
+            Each key and each value may only contain the characters [a-zA-Z0-9_].
+            These are also valid tags.
+            - foo_bar=baz
+            - foo3=1234,5=6
+            All of these are invalid.
+            - foo bar=3 // no spaces
+            - foo=bar,  // no trailing commas
+            - foo==bar  // too many `=`
+
+            Each key must be less than or equal to 40 bytes.
+            Each value must be less than or equal to 80 bytes.
+            There can only be a maximum of 25 key/value pairs total.
+            Additionally, the entire header cannot be more than 3000 bytes.
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuerySuccess'
+              example:
+                value:
+                  data:
+                    id: "338528512139853857"
+                    coll: "User"
+                    ts: "2022-07-29T14:26:37.650Z"
+                    name: "Alice"
+                  txn_time: "2022-08-25T23:32:53.462506Z"
+
+        '400':
+          description: Failed operation (bad request)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryFailure'
+              examples:
+                query_check_error:
+                  summary: query check error
+                  description: >-
+                    An error response that is the result of the query failing one or more validation checks.
+                  value:
+                    error:
+                      code: invalid_query
+                      message: "invalid query: the query failed 1 validation check"
+                    summary: >-
+                      error: the function `len` does not exist on string
+                      0: *query*:1
+                        |
+                      1 | 'foo'.len()
+                        |       ^^^
+                        |
+
+                query_runtime_error:
+                  summary: runtime error
+                  description: >-
+                    An error response that is the result of the query failing due to a runtime error. The 'code' field will vary based on the specific error cause.
+                  value:
+                    error:
+                      code: invalid_argument
+                      message: "invalid argument: expected value for `count` of type int, received string"
+                    summary: >-
+                      error: expected value for `count` of type int, received string
+                      0: *query*:1
+                        |
+                      1 | User.all().take("bad")
+                        | ^^^^^^^^^^^^^^^^^^^^
+                        |
+                invalid_request:
+                  summary: invalid request
+                  description: >-
+                    The request body is not valid JSON, or does not conform to the API specification
+                  value:
+                    error:
+                      code: invalid_request
+                      message: "invalid request: request body is not valid JSON"
+                value_too_large:
+                  summary: value too large
+                  description: |
+                    The transaction exceeded one of the following global limits:
+
+                    - Array size
+                    - String size
+                    - `Array.sequence()` range limit
+                  value:
+                    error:
+                      code: value_too_large
+                      message: "Value too large: string size 27787264 exceeds limit 16777216."
+                abort_error:
+                  summary: abort call
+                  description: >-
+                    The `abort()` function was called, which will return custom
+                    abort data in the error response.
+                  value:
+                    error:
+                      abort:
+                        "@time": "2023-04-06T03:33:32.226Z"
+                      code: "abort"
+                      message: "Query aborted."
+                    summary: >-
+                      error: Query aborted.
+                      at *query*:1:6
+                        |
+                      1 | abort(Time.now())
+                        |      ^^^^^^^^^^^^
+                        |
+
+        '401':
+          description: >-
+            Fauna is unable to authenticate the request due to an invalid or
+            missing authentication token.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              example: Bearer, Basic
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: unauthorized
+                  message: "invalid token: unable to authenticate request"
+
+        '409':
+          description: >-
+            Too much contention occurred on a document while executing a query.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: contended_transaction
+                  message: "Transaction was aborted due to detection of concurrent modifications to <document>"
+
+        '429':
+          description: The query exceeded some capacity limit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: limit_exceeded
+                  message: "too many requests: the client sent too many requests"
+
+        '440':
+          description: >-
+            The client specified timeout was exceeded, but the timeout was set lower than the query's expected
+            processing time. This response is distinguished from 503 by the fact that a 440 response is considered
+            a successful response for the purpose of determining the service's availability.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: time_out
+                  message: "timeout: the client-specified processing time limit was exceeded."
+
+        '500':
+          description: An unexpected error occurred
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: internal_error
+                  message: "internal error: an unexpected error occurred"
+
+        '502':
+          description: The router could not reach the backend
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: bad_gateway
+                  message: "Bad Gateway"
+
+        '503':
+          description: An unexpected timeout occurred
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: time_out
+                  message: "timeout: query timed out"
+
+        '504':
+          description: The router timed out trying to connect to the backend
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryFailure' }
+              example:
+                error:
+                  code: gateway_timeout
+                  message: "Gateway Timeout"
+
+components:
+  schemas:
+
+    # Request Types
+
+    Query:
+      type: object
+      required: [ query ]
+      properties:
+        query:
+          description: The FQL transaction to be executed
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/QueryInterpolation'
+        arguments:
+          description: >-
+            An object containing values provided to the submitted transaction as variables.
+            Note that variable names must be valid FQL identifiers.
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/QueryValue'
+    QueryInterpolation:
+      description: >-
+        An interpolated query, designed to be output by javascript template
+        strings or similar language features. This schema allows clients to
+        output well-formed JSON and rely on the service to validate the
+        structure of the query itself, separating the query expression from
+        values, and eliminating security issues such as injection attacks.
+      oneOf:
+        - type: object
+          required: [ fql ]
+          properties:
+            fql:
+              type: array
+              items:
+                oneOf:
+                  - type: string
+                  - $ref: '#/components/schemas/QueryInterpolation'
+        - type: object
+          required: [ value ]
+          properties:
+            value:
+              $ref: '#/components/schemas/TaggedValue'
+        - type: object
+          required: [ array ]
+          properties:
+            array:
+              type: array
+              items:
+                $ref: '#/components/schemas/QueryInterpolation'
+        - type: object
+          required: [ object ]
+          properties:
+            object:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/QueryInterpolation'
+    ValueFormat:
+      description: A format specifier for the arguments and response of the query
+      type: string
+      enum:
+        - "simple"
+        - "tagged"
+        - "decorated"
+
+    # Response Types
+
+    QuerySuccess:
+      allOf:
+        - type: object
+          required: [ data ]
+          properties:
+            data: { $ref: '#/components/schemas/QueryValue' }
+            static_type:
+              description: The query's inferred static result type, if the query was typechecked.
+              type: string
+        - $ref: '#/components/schemas/QueryInfo'
+    QueryFailure:
+      description: >-
+        A failed query response. Integrations which only want to report a human
+        readable version of the failure can simply print out the "summary"
+        field.
+      allOf:
+        - type: object
+          required: [ error ]
+          properties:
+            error:
+              $ref: '#/components/schemas/Error'
+        - $ref: '#/components/schemas/QueryInfo'
+    QueryInfo:
+      type: object
+      properties:
+        txn_ts:
+          description: >-
+            The transaction commit time in micros since epoch. Used by drivers
+            to populate the x-last-txn-ts request header in order to get a
+            consistent prefix RYOW guarantee.
+          type: integer
+        schema_version:
+          description: >-
+            The schema version used by the query. This can be used by clients displaying
+            schema to determine when they should refresh their schema.
+            If the schema version that a client has stored differs from the one returned by
+            the query, schema should be refreshed.
+          type: integer
+        summary:
+          description: >-
+            A comprehensive, human readable summary of any errors, warnings
+            and/or logs returned from the query.
+          type: string
+        query_tags:
+          description: The value of the x-query-tags header, if it was provided.
+        stats:
+          description: Query stats
+          type: object
+          properties:
+            compute_ops:
+              description: The amount of Transactional Compute Ops consumed by the query.
+              type: integer
+            read_ops:
+              description: The amount of Transactional Read Ops consumed by the query.
+              type: integer
+            write_ops:
+              description: The amount of Transactional Write Ops consumed by the query.
+              type: integer
+            query_time_ms:
+              description: The query run time in milliseconds.
+              type: integer
+            storage_bytes_read:
+              description: The amount of data read from storage, in bytes.
+              type: integer
+            storage_bytes_write:
+              description: The amount of data written to storage, in bytes.
+              type: integer
+            contention_retries:
+              description: The number of times the transaction was retried due to write contention.
+              type: integer
+            rate_limits_hit:
+              description: Operations that exceeded their set rate limit.
+              type: array
+              items:
+                type: string
+
+    Error:
+      type: object
+      required: [ code, message ]
+      properties:
+        code:
+          description: >-
+            A predefined code which indicates the type of error. See XXX for a
+            list of error codes.
+          type: string
+        message:
+          description: A short, human readable description of the error
+          type: string
+        abort:
+          description: >-
+            When the error code is 'abort', contains the value passed to the
+            originating `abort()` call.
+          $ref: '#/components/schemas/QueryValue'
+        constraint_failures:
+          description: >-
+            When the code is 'constraint_failure', an array of write constraint
+            failures associated with the error.
+          type: array
+          items:
+            type: object
+            description: An object describing the constraint failure.
+            required: [ message ]
+            properties:
+              message:
+                type: string
+              name:
+                type: string
+                description: The name of the failed constraint.
+              paths:
+                type: array
+                description: >-
+                  A list of paths where the failure occurred. This will typically
+                  contain a single element, pointing to the path of the constraint
+                  failure. For example, if there is an invalid type at `indexes.field`,
+                  the path would be [["indexes", "field"]].
+
+                  The only time there are multiple paths are for unique constraint
+                  failures. If there is a unique constraint on `name.first` and
+                  `name.last`, then the paths would be
+                  [["name", "first"], ["name", "last"]]
+                items:
+                  type: array
+                  description: >-
+                    The path into the write input data for which the failure applies.
+                  items:
+                    oneOf:
+                      - type: integer
+                      - type: string
+
+    QueryValue:
+      description: >-
+        A value in either the query arguments or response body. The format is
+        determined by the `x-format` header.
+      oneOf:
+        - $ref: '#/components/schemas/SimpleValue'
+        - $ref: '#/components/schemas/TaggedValue'
+
+    SimpleValue:
+      description: A value when the `format` is set to `simple`.
+      allOf:
+        - $ref: '#/components/schemas/Any'
+
+    TaggedValue:
+      description: A value when the `format` is set to `tagged`.
+      oneOf:
+        - type: object
+          description: A 32-bit signed integer
+          required: [ "@int" ]
+          properties:
+            "@int":
+              type: string
+        - type: object
+          description: A 64-bit signed integer
+          required: [ "@long" ]
+          properties:
+            "@long":
+              type: string
+        - type: object
+          description: A 64-bit double
+          required: [ "@double" ]
+          properties:
+            "@double":
+              type: string
+        - type: string
+          description: A string
+        - type: array
+          description: An array of values
+          items:
+            $ref: '#/components/schemas/TaggedValue'
+        - type: object
+          description: >-
+            An object. Properties with a name starting with `@` are not allowed
+            as raw objects. See the `@object` tag for encoding rules on objects
+            with `@` names.
+        - type: object
+          description: >-
+            An object. Explicitly tagged objects are allowed to have property
+            names starting with `@`. If an FQL object value contains properties
+            starting with `@`, it will be emitted on the wire in an `@object`
+            tag.
+          required: [ "@object" ]
+          properties:
+            "@object":
+              type: object
+        - type: object
+          description: A module (Math, Time, etc)
+          required: [ "@mod" ]
+          properties:
+            "@mod":
+              type: string
+        - type: object
+          description: A date (ex. 1970-01-01)
+          required: [ "@date" ]
+          properties:
+            "@date":
+              type: string
+        - type: object
+          description: A time (ex. 1970-01-01T00:00:00+0000)
+          required: [ "@time" ]
+          properties:
+            "@time":
+              type: string
+        - type: object
+          description: >-
+            A document. This document existed when the query was executed, and
+            was successfully read.
+
+            One and only one of the `id` or `name` fields will be present, depending
+            on if the reference points to a named value or not. For example, roles
+            have a name, so they will have the `name` field, and no `id` field.
+          example:
+            simple_user:
+              "@doc":
+                id: "1234"
+                coll:
+                  "@mod": "User"
+                ts:
+                  "@time": "2022-08-23T23:46:36.012335Z"
+                userData: "here"
+            user_coll:
+              "@doc":
+                name: "User"
+                coll:
+                  "@mod": "Collection"
+                ts:
+                  "@time": "2022-08-23T23:46:36.012335Z"
+                indexes:
+                  byUserData:
+                    terms:
+                      - field: "userData"
+                data:
+                  myCollectionData: "custom data here!"
+          required: [ "@doc" ]
+          properties:
+            "@doc":
+              type: object
+              required: [ "ts", "coll" ]
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                ts:
+                  $ref: '#/components/schemas/TaggedValue'
+                coll:
+                  $ref: '#/components/schemas/TaggedValue'
+              additionalProperties:
+                $ref: '#/components/schemas/TaggedValue'
+        - type: object
+          description: >-
+            A document that wasn't read by core. It may be deleted.
+
+            One and only one of the `id` or `name` fields will be present, depending
+            on if the reference points to a named value or not. For example, roles
+            have a name, so they will have the `name` field, and no `id` field.
+
+            When there is an `exists` field this can be used to determine if the ref
+            points to a document that can be read. If this field is set to false,
+            there will also be a corresponding `cause` field indicating the reason
+            that the document cannot be read.  The current set of possible reasons are:
+            1. not found
+            2. permission denied
+            If the exists field is not present, then the document may or may not exist.
+          example:
+            deleted_user:
+              "@ref":
+                id: "1234"
+                coll:
+                  "@mod": "User"
+                exists: false
+                reason: "not found"
+            deleted_role:
+              "@ref":
+                name: "MyRole"
+                coll:
+                  "@mod": "Role"
+                exists: false
+                reason: "not found"
+          required: [ "@ref" ]
+          properties:
+            "@ref":
+              type: object
+              required: [ "coll" ]
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                coll:
+                  $ref: '#/components/schemas/TaggedValue'
+                exists:
+                  type: boolean
+                  nullable: true
+                cause:
+                  type: string
+                  nullable: true
+        - type: object
+          description: >-
+            A set page. The `after` field is a string, which is a cursor that
+            can be used to fetch the next page, by passing it to `Set.paginate()`.
+          example:
+            some_strings:
+              "@set":
+                data:
+                  - "hello"
+                  - "world"
+                after: "ABCD"
+          required: [ "@set" ]
+          properties:
+            "@set":
+              type: object
+              required: [ "data" ]
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TaggedValue'
+                after:
+                  type: string
+
+    # supporting data types
+    Any:
+      description: Any JSON value
+      nullable: true

@@ -1,0 +1,44 @@
+name: Typescript Test
+
+on:
+  pull_request:
+    paths:
+      - "ext/fql/**"
+      # pick up test static env changes, which are parsed by fql-analyzer
+      - "ext/api/src/test/resources/*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: sbt/setup-sbt@v1
+      - uses: actions/checkout@v2
+      - name: Install
+        run: |
+          cd ext/fql/analyzer
+          yarn install
+      - name: Run linter
+        run: |
+          cd ext/fql/analyzer
+          yarn lint
+      - name: Setup SBT
+        uses: actions/setup-java@v3
+        with:
+          distribution: corretto
+          java-version: 17
+      - name: Compile ext/fql/analyzer
+        run: |
+          cd ext/fql/analyzer
+          yarn build
+      - name: Test FQL analyzer
+        run: |
+          cd ext/fql/analyzer
+          yarn test
+      - name: Install analyzer-lsp
+        run: |
+          cd ext/fql/analyzer-lsp
+          yarn install
+      - name: Compile analyzer-lsp
+        run: |
+          cd ext/fql/analyzer-lsp
+          yarn build

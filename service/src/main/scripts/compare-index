@@ -1,0 +1,3 @@
+#!/bin/bash
+
+faunadb-tool fauna.tools.IndexCompare "$@"

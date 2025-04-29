@@ -1,0 +1,4 @@
+#!/bin/bash
+
+faunadb-tool fauna.tools.DataExporter "$@"
+

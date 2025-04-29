@@ -1,0 +1,873 @@
+{
+  "schema_version": "$SCHEMA_VERSION$",
+  "environment": {
+    "globals": {
+      "AccessProvider": "AccessProviderCollection",
+      "Array": "ArrayModule",
+      "Boolean": "BooleanModule",
+      "Bytes": "BytesModule",
+      "Collection": "CollectionCollection",
+      "Credential": "CredentialCollection",
+      "Credentials": "CredentialCollection",
+      "Database": "DatabaseCollection",
+      "Date": "DateModule",
+      "Doc": "DocModule",
+      "Double": "DoubleModule",
+      "EventSource": "EventSourceModule",
+      "FQL": "FQLModule",
+      "Float": "FloatModule",
+      "Function": "FunctionCollection",
+      "ID": "IDModule",
+      "Int": "IntModule",
+      "Key": "KeyCollection",
+      "Long": "LongModule",
+      "Math": "MathModule",
+      "Null": "NullModule",
+      "Number": "NumberModule",
+      "Object": "ObjectModule",
+      "Query": "QueryModule",
+      "Role": "RoleCollection",
+      "Set": "SetModule",
+      "SetCursor": "SetCursorModule",
+      "String": "StringModule",
+      "Struct": "StructModule",
+      "Time": "TimeModule",
+      "Token": "TokenCollection",
+      "TransactionTime": "TransactionTimeModule",
+      "UUID": "UUIDModule",
+      "abort": "(return: Any) => Never",
+      "asc": "<A> (accessor: (A => Any)) => { asc: A => Any }",
+      "dbg": "<A> (value: A) => A",
+      "desc": "<A> (accessor: (A => Any)) => { desc: A => Any }",
+      "log": "(args: ...Any) => Null",
+      "newId": "() => ID"
+    },
+    "types": {
+      "AccessProvider": {
+        "self": "AccessProvider",
+        "fields": {
+          "coll": "AccessProviderCollection",
+          "delete": "() => NullAccessProvider",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => AccessProvider",
+          "update": "(data: { *: Any }) => AccessProvider"
+        },
+        "alias": "{ name: String, ts: Time, coll: AccessProviderCollection, issuer: String, jwks_uri: String, roles: Array<{ role: String, predicate: String }>, audience: String, data: { *: Any } | Null }"
+      },
+      "AccessProviderCollection": {
+        "self": "AccessProviderCollection",
+        "fields": {
+          "all": "(() => Set<AccessProvider>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<AccessProvider>)",
+          "byName": "(name: String) => NamedRef<AccessProvider>",
+          "create": "(data: { name: String, issuer: String, jwks_uri: String, roles: String | { role: String, predicate: String } | Array<String | { role: String, predicate: String }> | Null, data: { *: Any } | Null }) => AccessProvider",
+          "firstWhere": "(pred: (AccessProvider => Boolean)) => AccessProvider | Null",
+          "toString": "() => String",
+          "where": "(pred: (AccessProvider => Boolean)) => Set<AccessProvider>"
+        },
+        "type_hint": "server_collection"
+      },
+      "Array": {
+        "self": "<A> Array<A>",
+        "fields": {
+          "aggregate": "<A> (seed: A, combiner: (A, A) => A) => A",
+          "any": "<A> (predicate: (A => Boolean | Null)) => Boolean",
+          "append": "<A> (element: A) => Array<A>",
+          "at": "<A> (index: Number) => A",
+          "concat": "<A, B> (other: Array<B>) => Array<A | B>",
+          "distinct": "<A> () => Array<A>",
+          "drop": "<A> (amount: Number) => Array<A>",
+          "entries": "<A> () => Array<[Number, A]>",
+          "every": "<A> (predicate: (A => Boolean | Null)) => Boolean",
+          "filter": "<A> (predicate: (A => Boolean | Null)) => Array<A>",
+          "first": "<A> () => A | Null",
+          "firstWhere": "<A> (predicate: (A => Boolean | Null)) => A | Null",
+          "flatMap": "<A, B> (mapper: (A => Array<B>)) => Array<B>",
+          "flatten": "() => Array<Any>",
+          "fold": "<A, B> (seed: B, reducer: (B, A) => B) => B",
+          "foldRight": "<A, B> (seed: B, reducer: (B, A) => B) => B",
+          "forEach": "<A> (callback: (A => Any)) => Null",
+          "includes": "<A> (element: A) => Boolean",
+          "indexOf": "<A> ((element: A) => Number | Null) & ((element: A, start: Number) => Number | Null)",
+          "indexWhere": "<A> ((predicate: (A => Boolean | Null)) => Number | Null) & ((predicate: A => Boolean | Null, start: Number) => Number | Null)",
+          "isEmpty": "() => Boolean",
+          "last": "<A> () => A | Null",
+          "lastIndexOf": "<A> ((element: A) => Number | Null) & ((element: A, end: Number) => Number | Null)",
+          "lastIndexWhere": "<A> ((predicate: (A => Boolean | Null)) => Number | Null) & ((predicate: A => Boolean | Null, end: Number) => Number | Null)",
+          "lastWhere": "<A> (predicate: (A => Boolean | Null)) => A | Null",
+          "length": "Number",
+          "map": "<A, B> (mapper: (A => B)) => Array<B>",
+          "nonEmpty": "() => Boolean",
+          "order": "<A> (ordering: ...(A => Any) & {}) => Array<A>",
+          "prepend": "<A> (element: A) => Array<A>",
+          "reduce": "<A> (reducer: ((A, A) => A)) => A | Null",
+          "reduceRight": "<A> (reducer: ((A, A) => A)) => A | Null",
+          "reverse": "<A> () => Array<A>",
+          "slice": "<A> ((from: Number) => Array<A>) & ((from: Number, until: Number) => Array<A>)",
+          "take": "<A> (limit: Number) => Array<A>",
+          "toSet": "<A> () => Set<A>",
+          "toString": "() => String",
+          "where": "<A> (predicate: (A => Boolean | Null)) => Array<A>"
+        },
+        "access": "<A> Number => A"
+      },
+      "ArrayModule": {
+        "self": "ArrayModule",
+        "fields": {
+          "sequence": "(from: Number, until: Number) => Array<Number>"
+        },
+        "type_hint": "module"
+      },
+      "Boolean": {
+        "self": "Boolean",
+        "fields": {
+          "toString": "() => String"
+        },
+        "ops": {
+          "!": "() => Boolean",
+          "&&": "(other: Boolean) => Boolean",
+          "||": "(other: Boolean) => Boolean"
+        }
+      },
+      "BooleanModule": {
+        "self": "BooleanModule",
+        "type_hint": "module"
+      },
+      "Bytes": {
+        "self": "Bytes",
+        "fields": {
+          "toBase64": "() => String",
+          "toString": "() => String"
+        }
+      },
+      "BytesModule": {
+        "self": "BytesModule",
+        "fields": {
+          "fromBase64": "(encoded: String) => Bytes"
+        },
+        "apply": "(encoded: String) => Bytes",
+        "type_hint": "module"
+      },
+      "CollectionCollection": {
+        "self": "CollectionCollection",
+        "fields": {
+          "Deleted": "DeletedCollection",
+          "all": "(() => Set<CollectionDef>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<CollectionDef>)",
+          "byName": "(name: String) => NamedRef<CollectionDef>",
+          "create": "(data: { name: String, alias: String | Null, computed_fields: { *: { body: String, signature: String | Null } } | Null, fields: { *: { signature: String, default: String | Null } } | Null, migrations: Array<{ backfill: { field: String, value: String } } | { drop: { field: String } } | { split: { field: String, to: Array<String> } } | { move: { field: String, to: String } } | { add: { field: String } } | { move_conflicts: { into: String } } | { move_wildcard: { into: String } } | { add_wildcard: {} }> | Null, wildcard: String | Null, history_days: Number | Null, ttl_days: Number | Null, document_ttls: Boolean | Null, indexes: { *: { terms: Array<{ field: String, mva: Boolean | Null }> | Null, values: Array<{ field: String, mva: Boolean | Null, order: \"asc\" | \"desc\" | Null }> | Null, queryable: Boolean | Null } } | Null, constraints: Array<{ unique: Array<String> | Array<{ field: String, mva: Boolean | Null }> } | { check: { name: String, body: String } }> | Null, data: { *: Any } | Null }) => CollectionDef",
+          "firstWhere": "(pred: (CollectionDef => Boolean)) => CollectionDef | Null",
+          "toString": "() => String",
+          "where": "(pred: (CollectionDef => Boolean)) => Set<CollectionDef>"
+        },
+        "apply": "(collection: String) => Any",
+        "type_hint": "server_collection"
+      },
+      "CollectionDef": {
+        "self": "CollectionDef",
+        "fields": {
+          "coll": "CollectionCollection",
+          "delete": "() => NullCollectionDef",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => CollectionDef",
+          "update": "(data: { *: Any }) => CollectionDef"
+        },
+        "alias": "{ name: String, alias: String | Null, computed_fields: { *: { body: String, signature: String | Null } }, fields: { *: { signature: String, default: String | Null } }, migrations: Array<{}> | Null, wildcard: String, ts: Time, coll: CollectionCollection, history_days: Number | Null, ttl_days: Number | Null, document_ttls: Boolean | Null, indexes: { *: { terms: Array<{ field: String, mva: Boolean | Null }>, values: Array<{ field: String, mva: Boolean | Null, order: \"asc\" | \"desc\" | Null }>, queryable: Boolean, status: \"pending\" | \"active\" | \"failed\" } }, constraints: Array<{ *: Any }>, data: { *: Any } | Null }"
+      },
+      "Credential": {
+        "self": "Credential",
+        "fields": {
+          "coll": "CredentialCollection",
+          "delete": "() => NullCredential",
+          "exists": "() => true",
+          "login": "((secret: String) => Token) & ((secret: String, ttl: Time) => Token)",
+          "replace": "(data: { *: Any }) => Credential",
+          "update": "(data: { *: Any }) => Credential",
+          "verify": "(secret: String) => Boolean"
+        },
+        "alias": "{ id: ID, ts: Time, coll: CredentialCollection, document: Ref<{ *: Any }>, data: { *: Any } | Null }"
+      },
+      "CredentialCollection": {
+        "self": "CredentialCollection",
+        "fields": {
+          "all": "(() => Set<Credential>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<Credential>)",
+          "byDocument": "(document: { *: Any } | Null) => Ref<Credential>",
+          "byId": "(id: ID) => Ref<Credential>",
+          "create": "(data: { id: ID | Null, document: Ref<{ *: Any }>, password: String | Null, data: { *: Any } | Null }) => Credential",
+          "firstWhere": "(pred: (Credential => Boolean)) => Credential | Null",
+          "toString": "() => String",
+          "where": "(pred: (Credential => Boolean)) => Set<Credential>"
+        },
+        "apply": "(id: ID) => Ref<Credential>",
+        "type_hint": "server_collection"
+      },
+      "DatabaseCollection": {
+        "self": "DatabaseCollection",
+        "fields": {
+          "all": "(() => Set<DatabaseDef>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<DatabaseDef>)",
+          "byName": "(name: String) => NamedRef<DatabaseDef>",
+          "create": "(data: { name: String, priority: Number | Null, typechecked: Boolean | Null, protected: Boolean | Null, data: { *: Any } | Null }) => DatabaseDef",
+          "firstWhere": "(pred: (DatabaseDef => Boolean)) => DatabaseDef | Null",
+          "toString": "() => String",
+          "where": "(pred: (DatabaseDef => Boolean)) => Set<DatabaseDef>"
+        },
+        "type_hint": "server_collection"
+      },
+      "DatabaseDef": {
+        "self": "DatabaseDef",
+        "fields": {
+          "coll": "DatabaseCollection",
+          "delete": "() => NullDatabaseDef",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => DatabaseDef",
+          "update": "(data: { *: Any }) => DatabaseDef"
+        },
+        "alias": "{ name: String, ts: Time, coll: DatabaseCollection, global_id: String, priority: Number | Null, typechecked: Boolean | Null, protected: Boolean | Null, data: { *: Any } | Null }"
+      },
+      "Date": {
+        "self": "Date",
+        "fields": {
+          "add": "(amount: Number, unit: String) => Date",
+          "dayOfMonth": "Number",
+          "dayOfWeek": "Number",
+          "dayOfYear": "Number",
+          "difference": "(start: Date) => Number",
+          "month": "Number",
+          "subtract": "(amount: Number, unit: String) => Date",
+          "toString": "() => String",
+          "year": "Number"
+        }
+      },
+      "DateModule": {
+        "self": "DateModule",
+        "fields": {
+          "fromString": "(date: String) => Date",
+          "today": "() => Date"
+        },
+        "apply": "(date: String) => Date",
+        "type_hint": "module"
+      },
+      "DocModule": {
+        "self": "DocModule",
+        "type_hint": "module"
+      },
+      "Double": {
+        "self": "Number",
+        "fields": {
+          "toString": "() => String"
+        },
+        "ops": {
+          "%": "(other: Number) => Number",
+          "&": "(other: Number) => Number",
+          "*": "(other: Number) => Number",
+          "**": "(exponent: Number) => Number",
+          "-": "((other: Number) => Number) & (() => Number)",
+          "/": "(other: Number) => Number",
+          "^": "(other: Number) => Number",
+          "|": "(other: Number) => Number",
+          "~": "() => Number"
+        }
+      },
+      "DoubleModule": {
+        "self": "DoubleModule",
+        "type_hint": "module"
+      },
+      "EmptyNamedRef": {
+        "self": "<A> EmptyNamedRef<A>",
+        "fields": {
+          "coll": "Any",
+          "exists": "() => false",
+          "name": "String"
+        },
+        "alias": "Null"
+      },
+      "EmptyRef": {
+        "self": "<A> EmptyRef<A>",
+        "fields": {
+          "coll": "Any",
+          "exists": "() => false",
+          "id": "ID"
+        },
+        "alias": "Null"
+      },
+      "EventSource": {
+        "self": "<A> EventSource<A>",
+        "fields": {
+          "map": "<A, B> (mapper: (A => B)) => EventSource<B>",
+          "toString": "() => String",
+          "where": "<A> (predicate: (A => Boolean | Null)) => EventSource<A>"
+        }
+      },
+      "EventSourceModule": { "self": "EventSourceModule", "type_hint": "module" },
+      "FQL.SchemaModule": {
+        "self": "FQL.SchemaModule",
+        "fields": {
+          "defForIdentifier": "(ident: String) => Any"
+        },
+        "type_hint": "module"
+      },
+      "FQLModule": {
+        "self": "FQLModule",
+        "fields": {
+          "AccessProvider": "AccessProviderCollection",
+          "Array": "ArrayModule",
+          "Boolean": "BooleanModule",
+          "Bytes": "BytesModule",
+          "Collection": "CollectionCollection",
+          "Credential": "CredentialCollection",
+          "Credentials": "CredentialCollection",
+          "Database": "DatabaseCollection",
+          "Date": "DateModule",
+          "Doc": "DocModule",
+          "Double": "DoubleModule",
+          "EventSource": "EventSourceModule",
+          "Float": "FloatModule",
+          "Function": "FunctionCollection",
+          "ID": "IDModule",
+          "Int": "IntModule",
+          "Key": "KeyCollection",
+          "Long": "LongModule",
+          "Math": "MathModule",
+          "Null": "NullModule",
+          "Number": "NumberModule",
+          "Object": "ObjectModule",
+          "Query": "QueryModule",
+          "Role": "RoleCollection",
+          "Schema": "FQL.SchemaModule",
+          "Set": "SetModule",
+          "SetCursor": "SetCursorModule",
+          "String": "StringModule",
+          "Struct": "StructModule",
+          "Time": "TimeModule",
+          "Token": "TokenCollection",
+          "TransactionTime": "TransactionTimeModule",
+          "UUID": "UUIDModule",
+          "abort": "(return: Any) => Never",
+          "asc": "<A> (accessor: (A => Any)) => { asc: A => Any }",
+          "dbg": "<A> (value: A) => A",
+          "desc": "<A> (accessor: (A => Any)) => { desc: A => Any }",
+          "log": "(args: ...Any) => Null",
+          "newId": "() => ID"
+        },
+        "type_hint": "module"
+      },
+      "Float": {
+        "self": "Number",
+        "fields": {
+          "toString": "() => String"
+        },
+        "ops": {
+          "%": "(other: Number) => Number",
+          "&": "(other: Number) => Number",
+          "*": "(other: Number) => Number",
+          "**": "(exponent: Number) => Number",
+          "-": "((other: Number) => Number) & (() => Number)",
+          "/": "(other: Number) => Number",
+          "^": "(other: Number) => Number",
+          "|": "(other: Number) => Number",
+          "~": "() => Number"
+        }
+      },
+      "FloatModule": {
+        "self": "FloatModule",
+        "type_hint": "module"
+      },
+      "FunctionCollection": {
+        "self": "FunctionCollection",
+        "fields": {
+          "all": "(() => Set<FunctionDef>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<FunctionDef>)",
+          "byName": "(name: String) => NamedRef<FunctionDef>",
+          "create": "(data: { name: String, alias: String | Null, signature: String | Null, role: String | Null, body: String, data: { *: Any } | Null }) => FunctionDef",
+          "firstWhere": "(pred: (FunctionDef => Boolean)) => FunctionDef | Null",
+          "toString": "() => String",
+          "where": "(pred: (FunctionDef => Boolean)) => Set<FunctionDef>"
+        },
+        "apply": "(function: String) => Any",
+        "type_hint": "server_collection"
+      },
+      "FunctionDef": {
+        "self": "FunctionDef",
+        "fields": {
+          "coll": "FunctionCollection",
+          "delete": "() => NullFunctionDef",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => FunctionDef",
+          "update": "(data: { *: Any }) => FunctionDef"
+        },
+        "alias": "{ name: String, alias: String | Null, signature: String | Null, ts: Time, coll: FunctionCollection, role: String | Null, body: String, data: { *: Any } | Null }"
+      },
+      "ID": {
+        "self": "ID",
+        "fields": {
+          "toString": "() => String"
+        }
+      },
+      "IDModule": {
+        "self": "IDModule",
+        "apply": "((id: String) => ID) & ((id: Number) => ID)",
+        "type_hint": "module"
+      },
+      "Int": {
+        "self": "Number",
+        "fields": {
+          "toString": "() => String"
+        },
+        "ops": {
+          "%": "(other: Number) => Number",
+          "&": "(other: Number) => Number",
+          "*": "(other: Number) => Number",
+          "**": "(exponent: Number) => Number",
+          "-": "((other: Number) => Number) & (() => Number)",
+          "/": "(other: Number) => Number",
+          "^": "(other: Number) => Number",
+          "|": "(other: Number) => Number",
+          "~": "() => Number"
+        }
+      },
+      "IntModule": {
+        "self": "IntModule",
+        "type_hint": "module"
+      },
+      "Key": {
+        "self": "Key",
+        "fields": {
+          "coll": "KeyCollection",
+          "delete": "() => NullKey",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => Key",
+          "update": "(data: { *: Any }) => Key"
+        },
+        "alias": "{ id: ID, ts: Time, coll: KeyCollection, role: String, database: String | Null, ttl: Time | Null, secret: String | Null, data: { *: Any } | Null }"
+      },
+      "KeyCollection": {
+        "self": "KeyCollection",
+        "fields": {
+          "all": "(() => Set<Key>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<Key>)",
+          "byId": "(id: ID) => Ref<Key>",
+          "create": "(data: { role: String, database: String | Null, ttl: Time | Null, data: { *: Any } | Null }) => Key",
+          "firstWhere": "(pred: (Key => Boolean)) => Key | Null",
+          "toString": "() => String",
+          "where": "(pred: (Key => Boolean)) => Set<Key>"
+        },
+        "apply": "(id: ID) => Ref<Key>",
+        "type_hint": "server_collection"
+      },
+      "Long": {
+        "self": "Number",
+        "fields": {
+          "toString": "() => String"
+        },
+        "ops": {
+          "%": "(other: Number) => Number",
+          "&": "(other: Number) => Number",
+          "*": "(other: Number) => Number",
+          "**": "(exponent: Number) => Number",
+          "-": "((other: Number) => Number) & (() => Number)",
+          "/": "(other: Number) => Number",
+          "^": "(other: Number) => Number",
+          "|": "(other: Number) => Number",
+          "~": "() => Number"
+        }
+      },
+      "LongModule": {
+        "self": "LongModule",
+        "type_hint": "module"
+      },
+      "MathModule": {
+        "self": "MathModule",
+        "fields": {
+          "E": "Number",
+          "Infinity": "Number",
+          "NaN": "Number",
+          "PI": "Number",
+          "abs": "(x: Number) => Number",
+          "acos": "(x: Number) => Number",
+          "asin": "(x: Number) => Number",
+          "atan": "(x: Number) => Number",
+          "ceil": "(x: Number) => Number",
+          "cos": "(x: Number) => Number",
+          "cosh": "(x: Number) => Number",
+          "degrees": "(x: Number) => Number",
+          "exp": "(x: Number) => Number",
+          "floor": "(x: Number) => Number",
+          "hypot": "(x: Number, y: Number) => Number",
+          "log": "(x: Number) => Number",
+          "log10": "(x: Number) => Number",
+          "max": "(x: Number, y: Number) => Number",
+          "mean": "((numbers: Array<Number>) => Number) & ((numbers: Set<Number>) => Number)",
+          "min": "(x: Number, y: Number) => Number",
+          "pow": "(x: Number, power: Number) => Number",
+          "radians": "(x: Number) => Number",
+          "round": "(x: Number, precision: Number) => Number",
+          "sign": "(x: Number) => Number",
+          "sin": "(x: Number) => Number",
+          "sinh": "(x: Number) => Number",
+          "sqrt": "(x: Number) => Number",
+          "sum": "((numbers: Array<Number>) => Number) & ((numbers: Set<Number>) => Number)",
+          "tan": "(x: Number) => Number",
+          "tanh": "(x: Number) => Number",
+          "trunc": "(x: Number, precision: Number) => Number"
+        },
+        "type_hint": "module"
+      },
+      "NamedRef": {
+        "self": "<A> NamedRef<A>",
+        "alias": "<A> A | EmptyNamedRef<A>"
+      },
+      "Null": {
+        "self": "Null",
+        "fields": {
+          "toString": "() => String"
+        },
+        "access": "Any => Never"
+      },
+      "NullAccessProvider": {
+        "self": "NullAccessProvider",
+        "fields": {
+          "coll": "AccessProviderCollection",
+          "exists": "() => false",
+          "name": "String",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullCollectionDef": {
+        "self": "NullCollectionDef",
+        "fields": {
+          "coll": "CollectionCollection",
+          "exists": "() => false",
+          "name": "String",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullCredential": {
+        "self": "NullCredential",
+        "fields": {
+          "coll": "CredentialCollection",
+          "exists": "() => false",
+          "id": "ID",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullDatabaseDef": {
+        "self": "NullDatabaseDef",
+        "fields": {
+          "coll": "DatabaseCollection",
+          "exists": "() => false",
+          "name": "String",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullFunctionDef": {
+        "self": "NullFunctionDef",
+        "fields": {
+          "coll": "FunctionCollection",
+          "exists": "() => false",
+          "name": "String",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullKey": {
+        "self": "NullKey",
+        "fields": {
+          "coll": "KeyCollection",
+          "exists": "() => false",
+          "id": "ID",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullModule": {
+        "self": "NullModule",
+        "type_hint": "module"
+      },
+      "NullRole": {
+        "self": "NullRole",
+        "fields": {
+          "coll": "RoleCollection",
+          "exists": "() => false",
+          "name": "String",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "NullToken": {
+        "self": "NullToken",
+        "fields": {
+          "coll": "TokenCollection",
+          "exists": "() => false",
+          "id": "ID",
+          "toString": "() => String"
+        },
+        "alias": "Null"
+      },
+      "Number": {
+        "self": "Number",
+        "fields": {
+          "toString": "() => String"
+        },
+        "ops": {
+          "%": "(other: Number) => Number",
+          "&": "(other: Number) => Number",
+          "*": "(other: Number) => Number",
+          "**": "(exponent: Number) => Number",
+          "-": "((other: Number) => Number) & (() => Number)",
+          "/": "(other: Number) => Number",
+          "^": "(other: Number) => Number",
+          "|": "(other: Number) => Number",
+          "~": "() => Number"
+        }
+      },
+      "NumberModule": {
+        "self": "NumberModule",
+        "type_hint": "module"
+      },
+      "ObjectModule": {
+        "self": "ObjectModule",
+        "fields": {
+          "assign": "<A, B> (destination: { *: A }, source: { *: B }) => { *: A | B }",
+          "entries": "<A> (object: { *: A }) => Array<[String, A]>",
+          "fromEntries": "<A> (entries: Array<[String, A]>) => { *: A }",
+          "hasPath": "(object: { *: Any }, path: Array<String>) => Boolean",
+          "keys": "(object: Any) => Array<String>",
+          "select": "(object: { *: Any }, path: Array<String>) => Any",
+          "toString": "(object: Any) => String",
+          "values": "<A> (object: { *: A }) => Array<A>"
+        },
+        "type_hint": "module"
+      },
+      "QueryModule": {
+        "self": "QueryModule",
+        "fields": {
+          "identity": "() => { *: Any } | Null",
+          "isEnvProtected": "() => Boolean",
+          "isEnvTypechecked": "() => Boolean",
+          "token": "() => { *: Any } | Null"
+        },
+        "type_hint": "module"
+      },
+      "Ref": {
+        "self": "<A> Ref<A>",
+        "alias": "<A> A | EmptyRef<A>"
+      },
+      "Role": {
+        "self": "Role",
+        "fields": {
+          "coll": "RoleCollection",
+          "delete": "() => NullRole",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => Role",
+          "update": "(data: { *: Any }) => Role"
+        },
+        "alias": "{ name: String, ts: Time, coll: RoleCollection, privileges: Any, membership: Any, data: { *: Any } | Null }"
+      },
+      "RoleCollection": {
+        "self": "RoleCollection",
+        "fields": {
+          "all": "(() => Set<Role>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<Role>)",
+          "byName": "(name: String) => NamedRef<Role>",
+          "create": "(data: { name: String, privileges: Any | Null, membership: Any | Null, data: { *: Any } | Null }) => Role",
+          "firstWhere": "(pred: (Role => Boolean)) => Role | Null",
+          "toString": "() => String",
+          "where": "(pred: (Role => Boolean)) => Set<Role>"
+        },
+        "type_hint": "server_collection"
+      },
+      "Set": {
+        "self": "<A> Set<A>",
+        "fields": {
+          "aggregate": "<A> (seed: A, combiner: (A, A) => A) => A",
+          "any": "<A> (predicate: (A => Boolean | Null)) => Boolean",
+          "changesOn": "<A> (fields: ...A => Any) => EventSource<A>",
+          "concat": "<A, B> (other: Set<B>) => Set<A | B>",
+          "count": "() => Number",
+          "distinct": "<A> () => Set<A>",
+          "drop": "<A> (amount: Number) => Set<A>",
+          "eventSource": "<A> () => EventSource<A>",
+          "eventsOn": "<A> (fields: ...A => Any) => EventSource<A>",
+          "every": "<A> (predicate: (A => Boolean | Null)) => Boolean",
+          "first": "<A> () => A | Null",
+          "firstWhere": "<A> (predicate: (A => Boolean | Null)) => A | Null",
+          "flatMap": "<A, B> (mapper: (A => Set<B>)) => Set<B>",
+          "fold": "<A, B> (seed: B, reducer: (B, A) => B) => B",
+          "foldRight": "<A, B> (seed: B, reducer: (B, A) => B) => B",
+          "forEach": "<A> (callback: (A => Any)) => Null",
+          "includes": "<A> (element: A) => Boolean",
+          "isEmpty": "() => Boolean",
+          "last": "<A> () => A | Null",
+          "lastWhere": "<A> (predicate: (A => Boolean | Null)) => A | Null",
+          "map": "<A, B> (mapper: (A => B)) => Set<B>",
+          "nonEmpty": "() => Boolean",
+          "order": "<A> (ordering: ...(A => Any) & {}) => Set<A>",
+          "pageSize": "<A> (size: Number) => Set<A>",
+          "paginate": "<A> (() => { data: Array<A>, after: String | Null }) & ((size: Number) => { data: Array<A>, after: String | Null })",
+          "reduce": "<A> (reducer: ((A, A) => A)) => A | Null",
+          "reduceRight": "<A> (reducer: ((A, A) => A)) => A | Null",
+          "reverse": "<A> () => Set<A>",
+          "take": "<A> (limit: Number) => Set<A>",
+          "toArray": "<A> () => Array<A>",
+          "toSet": "<A> () => Set<A>",
+          "toStream": "<A> () => EventSource<A>",
+          "toString": "() => String",
+          "where": "<A> (predicate: (A => Boolean | Null)) => Set<A>"
+        }
+      },
+      "SetCursor": {
+        "self": "SetCursor",
+        "fields": {
+          "toString": "() => String"
+        }
+      },
+      "SetCursorModule": {
+        "self": "SetCursorModule",
+        "type_hint": "module"
+      },
+      "SetModule": {
+        "self": "SetModule",
+        "fields": {
+          "paginate": "((cursor: String | SetCursor) => { data: Array<Any>, after: String | Null }) & ((cursor: String | SetCursor, size: Number) => { data: Array<Any>, after: String | Null })",
+          "sequence": "(from: Number, until: Number) => Set<Number>",
+          "single": "<A> (element: A) => Set<A>"
+        },
+        "type_hint": "module"
+      },
+      "Stream": {
+        "self": "<A> Stream<A>",
+        "alias": "<A> EventSource<A>"
+      },
+      "String": {
+        "self": "String",
+        "fields": {
+          "at": "(index: Number) => String",
+          "casefold": "(() => String) & ((format: String) => String)",
+          "concat": "(other: String) => String",
+          "endsWith": "(suffix: String) => Boolean",
+          "includes": "(pattern: String) => Boolean",
+          "includesRegex": "(regex: String) => Boolean",
+          "indexOf": "((pattern: String) => Number | Null) & ((pattern: String, start: Number) => Number | Null)",
+          "indexOfRegex": "((regex: String) => Number | Null) & ((regex: String, start: Number) => Number | Null)",
+          "insert": "(index: Number, other: String) => String",
+          "lastIndexOf": "((pattern: String) => Number | Null) & ((pattern: String, end: Number) => Number | Null)",
+          "length": "Number",
+          "matchIndexes": "(regex: String) => Array<[Number, String]>",
+          "matches": "(regex: String) => Array<String>",
+          "parseDouble": "() => Number | Null",
+          "parseInt": "(() => Number | Null) & ((radix: Number) => Number | Null)",
+          "parseLong": "(() => Number | Null) & ((radix: Number) => Number | Null)",
+          "parseNumber": "() => Number | Null",
+          "replace": "((pattern: String, replacement: String) => String) & ((pattern: String, replacement: String, amount: Number) => String)",
+          "replaceAll": "(pattern: String, replacement: String) => String",
+          "replaceAllRegex": "(pattern: String, replacement: String) => String",
+          "replaceRegex": "((regex: String, replacement: String) => String) & ((regex: String, replacement: String, amount: Number) => String)",
+          "slice": "((start: Number) => String) & ((start: Number, end: Number) => String)",
+          "split": "(separator: String) => Array<String>",
+          "splitAt": "(index: Number) => [String, String]",
+          "splitRegex": "(regex: String) => Array<String>",
+          "startsWith": "(prefix: String) => Boolean",
+          "toLowerCase": "() => String",
+          "toString": "() => String",
+          "toUpperCase": "() => String"
+        },
+        "access": "Number => String"
+      },
+      "StringModule": {
+        "self": "StringModule",
+        "type_hint": "module"
+      },
+      "StructModule": {
+        "self": "StructModule",
+        "type_hint": "module"
+      },
+      "Time": {
+        "self": "Time",
+        "fields": {
+          "add": "(amount: Number, unit: String) => Time",
+          "dayOfMonth": "Number",
+          "dayOfWeek": "Number",
+          "dayOfYear": "Number",
+          "difference": "(start: Time, unit: String) => Number",
+          "hour": "Number",
+          "minute": "Number",
+          "month": "Number",
+          "second": "Number",
+          "subtract": "(amount: Number, unit: String) => Time",
+          "toMicros": "() => Number",
+          "toMillis": "() => Number",
+          "toSeconds": "() => Number",
+          "toString": "() => String",
+          "year": "Number"
+        }
+      },
+      "TimeModule": {
+        "self": "TimeModule",
+        "fields": {
+          "epoch": "(offset: Number, unit: String) => Time",
+          "fromString": "(time: String) => Time",
+          "now": "() => Time"
+        },
+        "apply": "(time: String) => Time",
+        "type_hint": "module"
+      },
+      "Token": {
+        "self": "Token",
+        "fields": {
+          "coll": "TokenCollection",
+          "delete": "() => NullToken",
+          "exists": "() => true",
+          "replace": "(data: { *: Any }) => Token",
+          "update": "(data: { *: Any }) => Token"
+        },
+        "alias": "{ id: ID, ts: Time, coll: TokenCollection, document: { *: Any }, secret: String | Null, ttl: Time | Null, data: { *: Any } | Null }"
+      },
+      "TokenCollection": {
+        "self": "TokenCollection",
+        "fields": {
+          "all": "(() => Set<Token>) & ((range: { from: Any } | { to: Any } | { from: Any, to: Any }) => Set<Token>)",
+          "byDocument": "(document: { *: Any }) => Set<Token>",
+          "byId": "(id: ID) => Ref<Token>",
+          "create": "(data: { id: ID | Null, document: { *: Any } | Null, ttl: Time | Null, data: { *: Any } | Null }) => Token",
+          "firstWhere": "(pred: (Token => Boolean)) => Token | Null",
+          "toString": "() => String",
+          "where": "(pred: (Token => Boolean)) => Set<Token>"
+        },
+        "apply": "(id: ID) => Ref<Token>",
+        "type_hint": "server_collection"
+      },
+      "TransactionTime": {
+        "self": "TransactionTime",
+        "fields": {
+          "toString": "() => String"
+        }
+      },
+      "TransactionTimeModule": {
+        "self": "TransactionTimeModule",
+        "apply": "() => TransactionTime",
+        "type_hint": "module"
+      },
+      "UUID": {
+        "self": "UUID",
+        "fields": {
+          "toString": "() => String"
+        }
+      },
+      "UUIDModule": {
+        "self": "UUIDModule",
+        "type_hint": "module"
+      },
+      "UserFunction": {
+        "self": "<A> UserFunction<A>",
+        "fields": {
+          "definition": "FunctionDef",
+          "toString": "() => String"
+        },
+        "apply": "<A> A"
+      },
+      "object": {
+        "self": "{ *: Any }",
+        "access": "String => Any"
+      }
+    }
+  }
+}

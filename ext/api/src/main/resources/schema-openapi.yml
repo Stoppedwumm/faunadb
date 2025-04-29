@@ -1,0 +1,888 @@
+openapi: 3.0.3
+info:
+  title: Fauna schema request/response API
+  description: >-
+    This spec describes the schema HTTP-based API. Schema changes are submitted
+    as FSL snippets in case of a single schema item update, or as FSL files
+    containing multiple schema items.
+  version:
+    0.1.0
+
+paths:
+  /schema/1/files:
+    get:
+      operationId: get_files
+      tags:
+        - files
+      summary: >-
+        Obtain a list of FSL files stored in the authenticated database.
+      parameters:
+        - $ref: '#/components/parameters/VersionOpt'
+        - $ref: '#/components/parameters/Force'
+        - $ref: '#/components/parameters/Staged'
+      responses:
+        200:
+          description: >-
+            A list of FSL files stored in the authenticated database.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SchemaVersion'
+                  - type: object
+                    properties:
+                      files:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            filename:
+                              type: string
+
+                        example:
+                          version: 1687280201961
+                          files:
+                            - filename: "main.fsl"
+                            - filename: "app/collections.fsl"
+                            - filenmae: "utils/functions.fsl"
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/files/{filename}:
+    get:
+      operationId: get_file
+      tags:
+        - files
+      summary: >-
+        Obtain the contents of a single FSL file.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          description: >-
+            The requested file's name. Note that file path's needs URL encoding.
+          schema:
+            type: string
+          examples:
+            flat:
+              summary: >-
+                Fetching a simple file.
+              value:
+                main.fsl
+            filepath:
+              summary: >-
+                Fetching a file path.
+              value:
+                app%2Fcollection.fsl
+
+        - $ref: '#/components/parameters/VersionOpt'
+        - $ref: '#/components/parameters/Force'
+        - $ref: '#/components/parameters/Staged'
+      responses:
+        200:
+          description: >-
+            The requested file's content.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SchemaVersion'
+                  - type: object
+                    properties:
+                      content:
+                        type: string
+              example:
+                version: 1687280201961
+                content: >-
+                  collection Foo {
+                    history_days 10
+                    ttl_days 5
+                  }
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/staged/abandon:
+    post:
+      operationId: staged-abandon
+      tags:
+        - Schema
+      description: |
+        Abandons the database's current staged schema.
+
+        You can abandon a staged schema at any time, including a schema
+        with the `ready` status. This is useful when you want to discard changes
+        that are no longer needed or failed during staging.
+
+        If the database has no staged schema, requests to the endpoint return
+        an error with a `400` HTTP status code.
+
+        Requests to this endpoint must use an authentication secret with the built-in `admin` role.
+      parameters:
+        - $ref: '#/components/parameters/VersionOpt'
+        - $ref: '#/components/parameters/Force'
+      responses:
+        '200':
+          description: |
+            Successfully abandoned the staged schema.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: number
+              example:
+                  version: 1234567890123456
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/staged/commit:
+    post:
+      operationId: staged-commit
+      tags:
+        - Schema
+      description: |
+        Commits a staged schema change to the database. When committed, the
+        database's staged schema becomes its active schema.
+
+        You can only commit a staged schema that has a status of `ready`. You
+        can check the status using the [Get staged schema
+        status](#operation/staged-status) endpoint.
+
+        If the staged schema status is not `ready` or the database has no staged
+        schema, requests to the endpoint return an error with a `400` HTTP
+        status code.
+
+        Requests to this endpoint must use an authentication secret with the
+        built-in `admin` role.
+      parameters:
+        - $ref: '#/components/parameters/VersionOpt'
+        - $ref: '#/components/parameters/Force'
+      responses:
+        '200':
+          description: |
+            Applies the staged schema to the database.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: number
+              example:
+                  version: 1234567890123456
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/staged/status:
+    get:
+      operationId: staged-status
+      tags:
+        - Schema
+      description: |
+        Gets the index build status for the database's current staged
+        schema.
+
+        If `format` is specified, the request also returns a diff between the
+        staged and active schema.
+
+        Requests to this endpoint must use an authentication secret with the
+        built-in `admin`, `server`, or `server-readonly` role.
+      parameters:
+        - $ref: '#/components/parameters/Color-Status'
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/VersionOpt'
+        - $ref: '#/components/parameters/Force'
+      responses:
+        '200':
+          description: |
+            Successfully retrieved index build status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: number
+                  status:
+                    description: |
+                      Index build status for the database's current staged
+                      schema.
+
+                      Possible values are:
+
+                      * `none`: The database has no staged schema.
+                      * `pending`: Changes are being processed. New indexes are still being built.
+                      * `ready`: All indexes have been built. Changes are ready to commit.
+                      * `failed`: There was an error during the staging process.
+                    type: string
+                  pending_summary:
+                    description: |
+                      A summary diff between the pending staged and active database
+                      schema. If the `status` is not `pending`, returns an empty string
+                      (`""`).
+
+                      Only present if the request specified a `format`.
+                    type: string
+                  diff:
+                    description: |
+                      JSON-escaped diff between the staged and
+                      active database schema. If there are no changes, returns
+                      an empty string (`""`).
+
+                      Only present if the request specified a `format`.
+                    type: string
+              examples:
+                'Status with no `diff`':
+                  summary: Index status with no diff requested
+                  value:
+                    version: 1234567890123456
+                    status: ready
+                'Status with semantic diff':
+                  summary: Index status with semantic diff
+                  value:
+                    version: 1234567890123456
+                    status: ready
+                    pending_summary: ""
+                    diff: "* Adding collection `Product` to main.fsl:8:1\n\n"
+                'Status with summary diff':
+                  summary: Index status with summary diff
+                  value:
+                    version: 1234567890123456
+                    status: ready
+                    pending_summary: ""
+                    diff:  "* Adding collection `Product` to main.fsl:8:1\n"
+                'Status with textual diff':
+                  summary: Index status with textual diff
+                  value:
+                    version: 1234567890123456
+                    status: ready
+                    pending_summary: ""
+                    diff:  "main.fsl\n@ line 4 to 10\n  collection Customer {\n\n  }\n+\n+ collection Product {\n+\n+ }\n"
+                'Status with empty diffs':
+                  summary: Index status with empty diffs
+                  value:
+                    version: 1234567890123456
+                    status: ready
+                    pending_summary: ""
+                    diff:  ""
+                'Pending status with pending summary':
+                  summary: Pending status with pending summary
+                  value:
+                    version: 1234567890123456
+                    status: pending
+                    pending_summary: "* Collection Customer:\n  ~ index byName: building\n"
+                    diff:  "* Modifying collection `Customer` at main.fsl:4:1:\n  * Indexes:\n  + add index `byName`\n\n"
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/update:
+    post:
+      operationId: update_schema
+      tags:
+        - files
+      description: >-
+        Update the authenticated database schema to match the one described by
+        the given FSL files. If successful, the given FSL files are stored in
+        the database.
+      parameters:
+        - $ref: '#/components/parameters/VersionReq'
+        - $ref: '#/components/parameters/Force'
+        - $ref: '#/components/parameters/Staged'
+      requestBody:
+        description: >-
+          Expects multiple file uploads where its form-data field name is the
+          file's name and its value is the file's content.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+                format: binary
+            example:
+              main.fsl: "collection Author {}"
+              collections.fsl: "collection Book {}"
+      responses:
+        200:
+          description: >-
+            The schema new schema version after the update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaVersion'
+              example:
+                version: 1687280201961
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/diff:
+    post:
+      operationId: diff_schema
+      tags:
+        - files
+      description: >-
+        Validates the given FSL files and return the schema difference between
+        the proposed and the current database schema.
+      parameters:
+        - $ref: '#/components/parameters/Color'
+        - $ref: '#/components/parameters/Force'
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Staged'
+        - $ref: '#/components/parameters/VersionReq'
+      requestBody:
+        description: >-
+          Expects multiple file uploads where its form-data field name is the
+          file's name and its value is the file's content.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+                format: binary
+            example:
+              main.fsl: "collection Author {}"
+              collections.fsl: "collection Book {}"
+      responses:
+        200:
+          description: >-
+            The schema difference between the proposed and the current database
+            schema.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SchemaVersion'
+                  - type: object
+                    properties:
+                      diff:
+                        type: string
+                example: >-
+                  * Modifying function 'id' at 0:24/main.fsl:
+                  * Summary:
+                    ~ changed: signature (see diff)
+
+                  * Diff:
+                    - function id(a: A): A {
+                    + function id(a) {
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        405:
+          $ref: '#/components/responses/BadMethod'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/validate:
+    $ref: '#/paths/~1schema~11~1diff'
+
+  /schema/1/{resource}:
+    post:
+      operationId: create_item
+      tags:
+        - items
+      description: >-
+        Creates a new schema item matching the given FSL snippet. Note that new
+        schema items are saved at the main.fsl file by default.
+      parameters:
+        - $ref: '#/components/parameters/ItemType'
+        - $ref: '#/components/parameters/VersionReq'
+        - $ref: '#/components/parameters/Force'
+      requestBody:
+        $ref: '#/components/requestBodies/FSLSnippet'
+      responses:
+        200:
+          $ref: '#/components/responses/SourceItem'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+  /schema/1/{resource}/{name}:
+    get:
+      operationId: get_item
+      tags:
+        - items
+      description: >-
+        Returns the given schema item, if exists.
+      parameters:
+        - $ref: '#/components/parameters/ItemType'
+        - $ref: '#/components/parameters/ItemName'
+        - $ref: '#/components/parameters/VersionOpt'
+        - $ref: '#/components/parameters/Force'
+      responses:
+        200:
+          $ref: '#/components/responses/SourceItem'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+    post:
+      operationId: update_item
+      tags:
+        - items
+      description: >-
+        Updates the given schema item, if exists.
+      parameters:
+        - $ref: '#/components/parameters/ItemType'
+        - $ref: '#/components/parameters/ItemName'
+        - $ref: '#/components/parameters/VersionReq'
+        - $ref: '#/components/parameters/Force'
+      requestBody:
+        $ref: '#/components/requestBodies/FSLSnippet'
+      responses:
+        200:
+          $ref: '#/components/responses/SourceItem'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+    delete:
+      operationId: delete_item
+      tags:
+        - items
+      description: >-
+        Deletes the given schema item, if exists.
+      parameters:
+        - $ref: '#/components/parameters/ItemType'
+        - $ref: '#/components/parameters/ItemName'
+        - $ref: '#/components/parameters/VersionReq'
+        - $ref: '#/components/parameters/Force'
+      responses:
+        200:
+          $ref: '#/components/responses/SourceItem'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        409:
+          $ref: '#/components/responses/Conflict'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/Timeout'
+
+components:
+  parameters:
+    VersionOpt:
+      name: version
+      in: query
+      description: >-
+        The last known schema version. If provided, Fauna will guard against
+        stale responses by checking if the server's schema version is at least
+        as rencent as the version provided.
+      schema:
+        type: number
+      example: 1687280201961
+
+    VersionReq:
+      name: version
+      in: query
+      required: true
+      description: >-
+        The last known schema version. If the schema version provided is stale,
+        the database will reject the request.
+      schema:
+        type: number
+      example: 1687280201961
+
+    Color:
+      name: color
+      in: query
+      description: |
+        Type of escape codes used to format the response's `diff` in color.
+        Accepts `ansi` (ANSI escape codes) or an empty string (`""`) (no color
+        formatting). Defaults to no color formatting.
+      schema:
+        type: string
+
+    Color-Status:
+      name: color
+      in: query
+      description: |
+        Type of escape codes used to format the following response properties in
+        color:
+
+        * `pending_summary`
+        * `diff`
+
+        Accepts `ansi` (ANSI escape codes) or an empty string (`""`) (no color
+        formatting). Defaults to no color formatting.
+      schema:
+        type: string
+
+    Format:
+      name: format
+      in: query
+      description: |
+        Type of diff returned in the output. Accepts
+        one of the following:
+
+        * `semantic` (default): A detailed, narrative diff
+          key structural changes.
+        * `summary`: A concise diff summarizing key structural changes.
+        * `textual`: A line-by-line diff of changes, including comments
+          and whitespace.
+      schema:
+        type: string
+
+    Force:
+      name: force
+      in: query
+      description: >-
+        If true, skips the schema version check.
+      schema:
+        type: boolean
+      example: true
+
+    ItemType:
+      name: resource
+      in: path
+      required: true
+      description: >-
+        The type of schema item to retrieve.
+      schema:
+        type: string
+        enum:
+          - collections
+          - functions
+          - roles
+          - access_providers
+
+    ItemName:
+      name: name
+      in: path
+      required: true
+      description: >-
+        The schema item's name.
+      schema:
+        type: string
+      example: Author
+
+    Staged:
+      name: staged
+      in: query
+      description: |
+        If `true`, the request operates on the database's staged
+        schema instead of the active schema.
+
+        Defaults to `false`.
+      schema:
+        type: boolean
+
+  schemas:
+    SchemaVersion:
+      type: object
+      properties:
+        version:
+          type: number
+
+    SchemaError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+
+    SourceItem:
+      allOf:
+        - $ref: "#/components/schemas/SchemaVersion"
+        - type: object
+          properties:
+            filename:
+              type: string
+            span:
+              type: object
+              properties:
+                start:
+                  type: number
+                end:
+                  type: number
+            content:
+              type: string
+            definition:
+              type: object
+
+  requestBodies:
+    FSLSnippet:
+      description: >-
+          The FSL snippet for the schema item to create.
+      required: true
+      content:
+        text/plain;charset=utf-8:
+          example: >-
+            collection Author {
+              history_days 30
+            }
+
+  responses:
+    SourceItem:
+      description: >-
+        A single schema item.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SourceItem'
+          example:
+            version: 1687280201961
+            filename: main.fsl
+            span:
+              start: 0
+              end: 39
+            content: >-
+              collection Author {
+                history_days 30
+              }
+            definition:
+              name: Author
+              coll: Collection
+              ts: 2023-10-23T14:52:42.700Z
+              constraints: []
+              history_days: 30
+              indexes: {}
+
+    BadRequest:
+      description: >-
+        A validation or parsing failure occured during the request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          examples:
+            parsing:
+              summary: >-
+                An example of a parsing error.
+              value:
+                error:
+                  message: >-
+                    error: Annotations are not allowed here
+                    at *fsl*:1:1
+                      |
+                    1 | @alias(Admin) role SuperAdmin {}
+                      | ^^^^^^^^^^^
+                      |
+            validation:
+              summary: >-
+                An example of a validation failure.
+              value:
+                error:
+                  message: >-
+                    Failed to create Function.
+                      constraint failures:
+                        role: Field refers to an unknown role name `Admin`.
+
+    BadMethod:
+      description:
+        Request uses an unsupported HTTP method for the endpoint.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: object
+                required:
+                  - message
+                description: |
+                  Contains the error.
+                properties:
+                  message:
+                    type: string
+                    description: |
+                      Human-readable description of the error.
+          example:
+            error:
+              message: Method not allowed
+
+    Unauthorized:
+      description: >-
+        Fauna is unable to authenticate the request due to an invalid or missing
+        authentication token.
+      headers:
+        WWW-authenticate:
+          schema:
+            type: string
+          example: Bearer, Basic
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          example:
+            error:
+              message: Access token required
+
+    Forbidden:
+      description: >-
+        The authentication provided does not have permission to perform the
+        intended action.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          example:
+            error:
+              message: Access Denied
+
+    NotFound:
+      description: >-
+        The requested file or item can not be found in the database.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          example:
+            error:
+              message: Not found
+
+    Conflict:
+      description: >-
+        A stale schema version was provided.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          example:
+            error:
+              message: Stale schema version provided
+
+    Timeout:
+      description: >-
+        An unexpected timeout occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          example:
+            error:
+              message: Query timed out
+
+    ServerError:
+      description: >-
+        An unexpected error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SchemaError'
+          example:
+            error:
+              message: An unexpected error occurred

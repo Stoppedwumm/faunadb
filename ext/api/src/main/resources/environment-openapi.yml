@@ -1,0 +1,178 @@
+openapi: 3.0.3
+info:
+  title: Fauna environment request/response API
+  description: >-
+    This spec describes the environment HTTP-based endpoint response.
+    The environment endpoint is used by the fql-analyzer to obtain the 
+    environment for a query so that it can be typechecked and provided with
+    auto completions.
+    
+    It is intended to be used only by the fql-analyzer, it is not meant for
+    public consumption.
+
+  version:
+    0.1.0
+
+paths:
+  /environment/1:
+    get:
+      tags:
+        - environment
+      summary: Obtain the environment information that will be available to queries using the same authentication secret.
+      operationId: environment
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentSuccess'
+              example:
+                value:
+                  schema_version: 1687280201961
+                  environment:
+                    globals:
+                      Time: "TimeCompanion"
+                    types:
+                      TimeCompanion:
+                        self: "TimeCompanion"
+                        fields:
+                          now: "() => Time"
+                          fromString: "(time: String) => Time"
+                          epoch: "(offset: Number, unit: String) => Time"
+                      Time:
+                        self: "Time"
+                        fields:
+                          year: "Number"
+                          add: "(amount: Number, unit: String) => Time"
+        '401':
+          description: >-
+            Fauna is unable to authenticate the request due to an invalid or
+            missing authentication token.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              example: Bearer, Basic
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvironmentError' }
+              example:
+                error:
+                  code: unauthorized
+                  message: "invalid token: unable to authenticate request"
+        '429':
+          description: The query exceeded some capacity limit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvironmentError' }
+              example:
+                error:
+                  code: limit_exceeded
+                  message: "too many requests: the client sent too many requests"
+        '500':
+          description: An unexpected error occurred
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvironmentError' }
+              example:
+                error:
+                  code: internal_error
+                  message: "internal error: an unexpected error occurred"
+        '502':
+          description: The router could not reach the backend
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvironmentError' }
+              example:
+                error:
+                  code: bad_gateway
+                  message: "Bad Gateway"
+        '503':
+          description: An unexpected timeout occurred
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvironmentError' }
+              example:
+                error:
+                  code: timeout
+                  message: "timeout: query timed out"
+        '504':
+          description: The router timed out trying to connect to the backend
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvironmentError' }
+              example:
+                error:
+                  code: gateway_timeout
+                  message: "Gateway Timeout"
+components:
+  schemas:
+    EnvironmentSuccess:
+      type: object
+      required: [ schema_version, environment ]
+      properties:
+        schema_version:
+          description: >-
+            The schema version of the obtained environment.  This value can be used to 
+            compare with the schema version returned by a query to determine if it is 
+            necessary to refresh the environment.
+          type: integer
+        environment:
+          type: object
+          required: [ globals, types ]
+          properties:
+            globals:
+              type: object
+              additionalProperties:
+                type: string
+            types:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/TypeShape'
+            truncated_resources:
+              description: >-
+                If, when looking up the environment, resources needed to be truncated 
+                they will be listed here. This means that the environment provided is 
+                not the full environment available to a query.
+              type: array
+              items:
+                type: string
+                enum: ['collection', 'function']
+
+    TypeShape:
+      type: object
+      required: [ self ]
+      properties:
+        self:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+        ops:
+          type: object
+          additionalProperties:
+            type: string
+        apply:
+          type: string
+        access:
+          type: string
+        alias:
+          type: string
+        type_hint:
+          type: string
+          enum: ['module', 'server_collection', 'user_collection']
+
+    EnvironmentError:
+      type: object
+      required: [ code, message ]
+      properties:
+        code:
+          description: >-
+            A predefined code which indicates the type of error. See XXX for a
+            list of error codes.
+          type: string
+        message:
+          description: A short, human readable description of the error
+          type: string

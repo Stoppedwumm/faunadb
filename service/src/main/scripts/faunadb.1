@@ -1,0 +1,25 @@
+.\" Process this file with groff -man -Tascii file-name to see how it looks like
+.\"
+.Dd September 27, 2017
+.Dt FAUNADB 1
+.Os
+.Sh NAME
+.Nm faunadb
+.Nd start faunadb server
+.Sh SYNOPSIS
+.Nm
+.Op Fl c Ar config.yml
+.Sh DESCRIPTION
+.Nm
+command starts the FaunaDB database server. Although, we recommend managing
+FaunaDB with systemd.
+.Sh EXAMPLES
+.Bl -tag -width indent
+.It Li "systemctl start faunadb"
+Start FaunaDB service.
+.It Li "systemctl stop faunadb"
+Stop FaunaDB service.
+.It Li "systemctl status faunadb"
+Get FaunaDB service status.
+.It Li "journalctl -u faunadb"
+Get FaunaDB service logs.

@@ -1,0 +1,133 @@
+#!/bin/bash
+
+set -euo pipefail
+
+BIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+SHARE_DIR=$(dirname -- "$BIN_DIR")
+LIB_DIR="$SHARE_DIR/lib"
+
+if [ -z "${FAUNADB_JAR-}" ]; then
+    if [ -f "./faunadb.jar" ]; then
+        FAUNADB_JAR="./faunadb.jar"
+    else
+        FAUNADB_JAR="$LIB_DIR/faunadb.jar"
+    fi
+fi
+
+if [ ! -f "$FAUNADB_JAR" ]; then
+    echo "faunadb.jar not found. Please make sure that faunadb.jar is at $FAUNADB_JAR" 1>&2
+    exit 1
+fi
+
+while getopts ":c:" OPTION; do
+    case $OPTION in
+    c)
+        FAUNADB_CONFIG=$OPTARG
+        ;;
+    ?) ;;
+    esac
+done
+
+if [ -z "${FAUNADB_CONFIG-}" ]; then
+    if [ -f "./faunadb.yml" ]; then
+        FAUNADB_CONFIG="./faunadb.yml"
+    elif [ -f "$SHARE_DIR/faunadb.yml" ]; then
+        FAUNADB_CONFIG="$SHARE_DIR/faunadb.yml"
+    else
+        FAUNADB_CONFIG="/etc/faunadb.yml"
+    fi
+fi
+
+if [ ! -f "$FAUNADB_CONFIG" ]; then
+    echo "faunadb.yml config file not found." 1>&2
+    exit 1
+fi
+
+if [ -z "${JAVA-}" ]; then
+    JAVA=java
+fi
+
+if [ -z "${GC_LOG_PATH-}" ]; then
+    if grep -q "log_path: " "$FAUNADB_CONFIG"; then
+        GC_LOG_PATH=$(grep "log_path: " "$FAUNADB_CONFIG" | awk '{ print $2 }' || echo "")
+    fi
+fi
+
+if [ -z "${GC_LOG_PATH-}" ]; then
+    GC_LOG_PATH="/var/log/faunadb"
+fi
+
+if [ -z "${GC_LOG_OPTS-}" ]; then
+    GC_LOG_OPTS="-Xlog:gc*:file=${GC_LOG_PATH}/gc.log:time,tid,pid,level:filecount=10,filesize=10m"
+fi
+
+# "sensible" defaults (half the available RAM)
+if [ -z "${MAX_HEAP_SIZE-}" ]; then
+    if [ -f /proc/meminfo ]; then
+        MAX_HEAP_SIZE=$(cat /proc/meminfo | grep MemTotal | awk '{ printf "%dK", $2 / 2}')
+    else
+        MAX_HEAP_SIZE="2G"
+    fi
+fi
+
+# "sensible" defaults (80% of RAM left after heap)
+if [ -z "${MAX_DIRECT_SIZE-}" ]; then
+    if [ -f /proc/meminfo ]; then
+        MAX_DIRECT_SIZE=$(cat /proc/meminfo | grep MemTotal | awk '{ printf "%dK", ($2 - ($2 / 2)) * 0.8 }')
+    else
+        MAX_DIRECT_SIZE="2G"
+    fi
+fi
+
+if [ -z "${STACK_SIZE-}" ]; then
+    STACK_SIZE="256k"
+fi
+
+# MAX_HEAP_SIZE / HEAP_REGION_SIZE =~ 2k
+if [ -z "${HEAP_REGION_SIZE-}" ]; then
+    HEAP_REGION_SIZE="4m"
+fi
+
+if [ -z "${GC_OPTS-}" ]; then
+    GC_OPTS="-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:G1HeapRegionSize=$HEAP_REGION_SIZE"
+fi
+
+# TODO: Remove when we can
+# java.base/java.util* packages are all accessed by JAMM
+# java.base/java.io package is accessed by C*'s FBUtilities
+
+ulimit -c unlimited
+
+umask 0027
+
+exec $JAVA \
+    -Xshare:off \
+    -Djava.net.preferIPv4Stack=true \
+    -Dhttp.connection.timeout=2 \
+    -Dhttp.connection-manager.timeout=2 \
+    -Dhttp.socket.timeout=6 \
+    -Dio.netty.maxDirectMemory=0 \
+    -Dio.netty.allocator.type=unpooled \
+    -Dio.netty.noPreferDirect=true \
+    -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector \
+    --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED \
+    --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+    --add-opens java.base/java.util=ALL-UNNAMED \
+    --add-opens java.base/java.io=ALL-UNNAMED \
+    --add-opens java.base/java.lang=ALL-UNNAMED \
+    --add-opens java.base/java.math=ALL-UNNAMED \
+    --add-opens=java.base/java.net=ALL-UNNAMED, \
+    --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED, \
+    --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED, \
+    --add-opens java.base/sun.nio.ch=ALL-UNNAMED \
+    $JAVA_OPTS \
+    -Xmx$MAX_HEAP_SIZE \
+    -Xms$MAX_HEAP_SIZE \
+    -Xss$STACK_SIZE \
+    $GC_LOG_OPTS \
+    $GC_OPTS \
+    -XX:+UseThreadPriorities \
+    -XX:+StartAttachListener \
+    -XX:MaxDirectMemorySize=$MAX_DIRECT_SIZE \
+    -server \
+    -jar "$FAUNADB_JAR" "$@"

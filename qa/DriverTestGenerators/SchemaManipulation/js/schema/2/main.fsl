@@ -1,0 +1,30 @@
+collection test_schema {
+  v2_string: String
+  v2_int: Int = 0
+  v2_boolean: Boolean = false
+  v2_twotypes: String | Number
+
+  index IndexOneField {
+    values [.v2_string]
+  }
+
+  migrations {
+    add .v1_string
+    backfill .v1_string = "backfilled at v1"
+    add .v1_number
+    add .v1_boolean
+    add .v1_twotypes
+    backfill .v1_twotypes = "backfilled at v1"
+    add .v1_conflicts
+    move_conflicts .v1_conflicts
+    move_wildcard .v1_conflicts
+
+    drop .v1_conflicts
+
+    move .v1_string -> .v2_string
+    split .v1_number -> .v2_int, .garbage
+    drop .garbage
+    move .v1_boolean -> .v2_boolean
+    move .v1_twotypes -> .v2_twotypes
+  }
+}

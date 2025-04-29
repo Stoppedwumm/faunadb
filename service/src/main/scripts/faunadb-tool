@@ -1,0 +1,117 @@
+#!/bin/bash
+
+class="$1"
+
+shift
+ARGS="$@"
+
+if [ -z "$FAUNADB_CONFIG" ]; then
+  if [ -f "./faunadb.yml" ]; then
+      FAUNADB_CONFIG="./faunadb.yml"
+  elif [ -f "./etc/faunadb.yml" ]; then
+      FAUNADB_CONFIG="./etc/faunadb.yml"
+  elif [ -f "/usr/etc/faunadb.yml" ]; then
+      FAUNADB_CONFIG="/usr/etc/faunadb.yml"
+  else
+      FAUNADB_CONFIG="/etc/faunadb.yml"
+  fi
+
+  export FAUNADB_CONFIG
+fi
+
+if [ -z "$FAUNADB_JAR" ]; then
+  if [ -f "./faunadb.jar" ]; then
+    FAUNADB_JAR="./faunadb.jar"
+  elif [ -f "./lib/faunadb.jar" ]; then
+    FAUNADB_JAR="./lib/faunadb.jar"
+  elif [ -f "/usr/share/faunadb/lib/faunadb.jar" ]; then
+    FAUNADB_JAR="/usr/share/faunadb/lib/faunadb.jar"
+  fi
+fi
+
+if [ ! -f "$FAUNADB_JAR" ]; then
+  echo "faunadb.jar not found. Please make sure that faunadb.jar is at /usr/share/faunadb/lib/faunadb.jar," 1>&2
+  echo "in ./lib, or in the current working directory." 1>&2
+  exit 1
+fi
+
+if [ -z "$JAMM_JAR" ]; then
+    if [ -f "./lib/jamm.jar" ]; then
+        JAMM_JAR="./lib/jamm.jar"
+    elif [ -f "/usr/share/faunadb/lib/jamm.jar" ]; then
+        JAMM_JAR="/usr/share/faunadb/lib/jamm.jar"
+    fi
+fi
+
+if [ -n "$JAMM_JAR" ]; then
+    JAVA_OPTS="-javaagent:${JAMM_JAR} ${JAVA_OPTS}"
+fi
+
+if [ -z "$JAVA" ]; then
+  JAVA=java
+fi
+
+if [ -z "$GC_LOG_PATH" ]; then
+  GC_LOG_PATH="/var/log/faunadb"
+fi
+
+if [ -z "$GC_LOG_OPTS" ]; then
+  GC_LOG_OPTS="-Xlog:gc*:file=${GC_LOG_PATH}/gc.log:time,tid,pid,level:filecount=10,filesize=10m"
+fi
+
+# "sensible" defaults (half the available RAM)
+if [ -z "$MAX_HEAP_SIZE" ]; then
+  if [ -f /proc/meminfo ]; then
+    MAX_HEAP_SIZE=$(cat /proc/meminfo | grep MemTotal | awk '{ printf "%dK", $2 / 2}')
+  else
+    MAX_HEAP_SIZE="2G"
+  fi
+fi
+
+# "sensible" defaults (80% of RAM left after heap)
+if [ -z "$MAX_DIRECT_SIZE" ]; then
+  if [ -f /proc/meminfo ]; then
+    MAX_DIRECT_SIZE=$(cat /proc/meminfo | grep MemTotal | awk '{ printf "%dK", ($2 - ($2 / 2)) * 0.8 }')
+  else
+    MAX_DIRECT_SIZE="2G"
+  fi
+fi
+
+if [ -z "$STACK_SIZE" ]; then
+  STACK_SIZE="256k"
+fi
+
+# MAX_HEAP_SIZE / HEAP_REGION_SIZE =~ 2k
+if [ -z "$HEAP_REGION_SIZE" ]; then
+  HEAP_REGION_SIZE="4m"
+fi
+
+if [ -z "$GC_OPTS" ]; then
+    GC_OPTS="-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:G1HeapRegionSize=$HEAP_REGION_SIZE"
+fi
+
+ulimit -c unlimited
+
+umask 0027
+
+exec $JAVA \
+    -Xshare:off \
+    -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector \
+    --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED \
+    --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+    --add-opens java.base/java.util=ALL-UNNAMED \
+    --add-opens java.base/java.io=ALL-UNNAMED \
+    --add-opens java.base/java.lang=ALL-UNNAMED \
+    --add-opens java.base/sun.nio.ch=ALL-UNNAMED \
+    $JAVA_OPTS \
+    -Xmx$MAX_HEAP_SIZE \
+    -Xms$MAX_HEAP_SIZE \
+    -Xss$STACK_SIZE \
+    $GC_LOG_OPTS \
+    $GC_OPTS \
+    -XX:+UseThreadPriorities \
+    -XX:+StartAttachListener \
+    -XX:MaxDirectMemorySize=$MAX_DIRECT_SIZE \
+    -cp $FAUNADB_JAR \
+    $class $ARGS
+

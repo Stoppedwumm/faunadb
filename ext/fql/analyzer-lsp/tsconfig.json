@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@tsconfig/node16-strictest/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2022"],
+    "outDir": "build/ts",
+    "module": "es2022",
+    "moduleResolution": "node",
+    "checkJs": false,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "typeRoots": ["types", "node_modules/@types"],
+    // not sure why this is needed, but typescript won't compile without it.
+    "ignoreDeprecations": "5.0"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["types", "node_modules", "build/scala/**/*.js"]
+}

@@ -1,0 +1,21 @@
+[Unit]
+Description=${{descr}}
+Requires=${{start_facilities}}
+
+[Service]
+Type=simple
+WorkingDirectory=${{chdir}}
+EnvironmentFile=-/etc/default/faunadb
+ExecStart=${{chdir}}/bin/${{exec}}
+Restart=always
+RestartSec=${{retryTimeout}}
+SuccessExitStatus=${{SuccessExitStatus}}
+User=${{daemon_user}}
+ExecStartPre=/bin/mkdir -p /run/${{app_name}}
+ExecStartPre=/bin/chown ${{daemon_user}}:${{daemon_group}} /run/${{app_name}}
+ExecStartPre=/bin/chmod 755 /run/${{app_name}}
+PermissionsStartOnly=true
+LimitNOFILE=${{file_descriptor_limit}}
+
+[Install]
+WantedBy=multi-user.target

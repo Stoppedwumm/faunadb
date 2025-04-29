@@ -1,0 +1,40 @@
+{
+  "nodes": [
+    {
+      "status": "up",
+      "state": "live",
+      "ownership": 1.0,
+      "ownership_goal": 1.0,
+      "host_id": "11a38170-3c07-4c13-b700-86c58ca888c2",
+      "address": "127.0.0.1",
+      "replica": "dc1",
+      "worker_id": "512",
+      "log_segment": "0",
+      "log_segment_leader": true,
+      "persisted_timestamp": "1970-01-01T00:00:00Z"
+    },
+    {
+      "status": "up",
+      "state": "live",
+      "ownership": 1.0,
+      "ownership_goal": 1.0,
+      "host_id": "6c3f2824-25a5-404d-96c3-2838d4d04692",
+      "address": "127.0.0.2",
+      "replica": "dc2",
+      "worker_id": "513",
+      "log_segment": "0",
+      "log_segment_leader": false,
+      "persisted_timestamp": "1970-01-01T00:00:00Z"
+    }
+  ],
+  "replica_info": [
+    {
+      "name": "dc1",
+      "type": "data+log"
+    },
+    {
+      "name": "dc2",
+      "type": "data+log"
+    }
+  ]
+}
