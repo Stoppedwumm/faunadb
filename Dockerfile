@@ -10,7 +10,8 @@ COPY . .
 RUN export FAUNADB_RELEASE=true && sbt service/assembly
 
 # --- Stage 2: Runtime Stage ---
-FROM openjdk:17-slim
+# Changed from openjdk:17-slim to eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jre
 
 WORKDIR /faunadb
 
@@ -18,7 +19,6 @@ WORKDIR /faunadb
 RUN mkdir -p /faunadb/bin /faunadb/lib /faunadb/data
 
 # Copy the JAR from the builder stage
-# (Wildcard used in case version numbers are appended)
 COPY --from=builder /app/service/target/scala-2.13/faunadb.jar /faunadb/lib/faunadb.jar
 
 # Copy the scripts from the source
@@ -33,9 +33,7 @@ RUN chmod +x /faunadb/bin/*
 ENV PATH="/faunadb/bin:${PATH}"
 
 # Expose default FaunaDB ports
-# 8443: API / Database
-# 8084: GraphQL
 EXPOSE 8443 8084
 
-# Default entry point is the faunadb script
+# Default entry point
 ENTRYPOINT ["faunadb"]
