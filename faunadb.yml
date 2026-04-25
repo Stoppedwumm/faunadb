@@ -1,0 +1,19 @@
+# FaunaDB Configuration (Flat Structure)
+data_dir: "/faunadb/data"
+
+# Port for database interactions
+api_port: 8443
+
+# Port for GraphQL
+graphql_port: 8084
+
+# The address the DB listens on inside the container
+# Use 0.0.0.0 so it is reachable from outside
+network_address: "0.0.0.0"
+
+# The address the DB tells other nodes to use to find it. 
+# For a single-node Docker setup, 127.0.0.1 is usually sufficient.
+network_broadcast_address: "127.0.0.1"
+
+# Logging configuration
+log_level: "info"
